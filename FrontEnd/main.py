@@ -139,9 +139,18 @@ async def createJobs(request_id, current_path,job_type):
             pan_id = row[0]
             pass_id = row[1]
             
+            
+            
+            
+            insert_query = """INSERT INTO jobs (request_id, row_number) 
+                            VALUES (%s::uuid, %s)
+                            RETURNING id; """
+            cursor.execute(insert_query, (request_id, count))
+            new_job_id = cursor.fetchone()['id']
+            con.commit()
+            
             paylod = {
-                "user_id": "user_12345",
-                "request_id": "req_98765",
+                "job_id": new_job_id,
                 "pan_id": pan_id,
                 "pass_id": pass_id,
                 "job_code": job_type
@@ -149,14 +158,6 @@ async def createJobs(request_id, current_path,job_type):
             
             response = requests.post(api2url, json=paylod)
             print(response.json())
-            
-            
-            insert_query = """INSERT INTO jobs (request_id, row_number , rjob_id) 
-                            VALUES (%s::uuid, %s, %s)
-                            """
-            cursor.execute(insert_query, (request_id, count, response.json().get("job_id")))
-            con.commit()
-            
            
             
             count +=1

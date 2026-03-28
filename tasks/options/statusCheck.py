@@ -8,7 +8,7 @@ from db import getdb
 
 
 
-def demo(pan_id,pass_id):
+def demo(pan_id,pass_id,job_id):
     conn = getdb()
     cursor = conn.cursor()
     
@@ -108,7 +108,19 @@ def demo(pan_id,pass_id):
 
     print("Refund status:", status)
     
-
+    
+    
+    ## end =-== seleniunmm 
+    
+    
+    
+    insert_query = """INSERT INTO job_results (job_id, success, error , output)
+                    VALUES (%s::uuid, %s, %s, %s)
+                    RETURNING id;"""
+    cursor.execute(insert_query, (job_id, True, None, status))
+    conn.commit()
+    
+    
     return True
     
     
