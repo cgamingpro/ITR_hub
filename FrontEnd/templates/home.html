@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 File Upload</title>
+</head>
+<body>
+    <h2>Upload your file and select options</h2>
+    
+    <form id="uploadForm">
+        
+        <label>Select File:</label>
+        <input type="file" name="user_file" required><br><br>
+        
+        <label>Options:</label><br>
+        <input type="checkbox" name="option1" value="true"> Option 1<br>
+        <input type="checkbox" name="option2" value="true"> Option 2<br>
+        <input type="checkbox" name="option3" value="true"> Option 3<br>
+        <input type="checkbox" name="option4" value="true"> Option 4<br><br>
+        
+        <button type="submit">Submit to S3</button>
+    </form>
+
+    <h4 id="statusMessage" style="color: blue;"></h4>
+
+    <script>
+        // Listen for the user to click the submit button
+        document.getElementById("uploadForm").addEventListener("submit", async function(event) {
+            
+            // CRITICAL: This stops the browser from reloading the page!
+            event.preventDefault(); 
+
+            // Tell the user we are working on it
+            document.getElementById("statusMessage").innerText = "Uploading... please wait.";
+
+            // Gather all the file and checkbox data from the form
+            let formData = new FormData(this);
+
+            try {
+                // Send the data to your FastAPI /upload route in the background
+                let response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // Wait for your Python code to send back that JSON {"message": "..."}
+                let result = await response.json();
+
+                // Update the text on the page with the success message!
+                document.getElementById("statusMessage").innerText = result.message;
+                document.getElementById("statusMessage").style.color = "green";
+
+            } catch (error) {
+                // If something breaks, show an error
+                document.getElementById("statusMessage").innerText = "Something went wrong!";
+                document.getElementById("statusMessage").style.color = "red";
+            }
+        });
+    </script>
+</body>
+</html>

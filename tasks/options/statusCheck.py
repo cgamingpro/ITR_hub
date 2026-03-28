@@ -4,10 +4,14 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from db import getdb
 
 
 
 def demo(pan_id,pass_id):
+    conn = getdb()
+    cursor = conn.cursor()
+    
     options = Options()
     options.binary_location = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
