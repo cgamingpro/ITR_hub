@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITR Hub Sign-Up</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css">
+
+    <!-- cdn -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <!-- main js file -->
+    <script src="script.js"></script>
+</head>
+
+<body>
+
+    <div class="container">
+
+
+
+        <h2>Let's join ITR Hub community</h2>
+        <p id="head">Sign Up Form</p>
+
+        <!-- signup form
+      -->
+      
+            <div>
+                <label for="email">Email</label>
+                <input type="email" placeholder="enter you email" id="email" name="email">
+            </div>
+
+
+            <div>
+                <label for="password">Password</label>
+                <input type="password" placeholder="set your password" id="password" name="password">
+            </div>
+            <button  id="signup" onclick="SignUp()">SIGN UP</button>
+            <div id="logined">
+                <p>Already have an Account? </p>
+                <span><a href="signin.html">Sign In</a></span>
+
+            </div>
+            <div class="forget">
+                <span><a href="forget.html">Forget Password?</a> </span>
+            </div>
+    
+
+    </div>
+</body>
+
+</html>
