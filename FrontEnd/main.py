@@ -6,27 +6,30 @@ import shutil,os
 from rediscon import redis_conn
 import requests
 from db import getdb
+import data
 
 
-
-api2url = "http://localhost:8000/job"
+##url for job queuing api 
+api2url = data.API2URL
 
 app = FastAPI()
+
 templates = Jinja2Templates(directory="templates")
 
-#for tsetign only 
+# Replace with FireBase cloud Storage 
 UPLOAD_DIRECTORY = "local_storage"
 os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
+
+
+#Here just for testing , currently esists in DB, manually added
 current_user_id = "9d7d0d52-c450-4cbc-a148-f0fe49e6b3e5" 
 
+#main end point but i don't give much fkk
 @app.get("/")
 async def home(request: Request):
     return templates.TemplateResponse("home.html", {"request": request})
 
-
-
-
-
+#for the Excel upload and completer job queing , 
 @app.post("/upload")
 async def handele_upload(
     user_file: UploadFile = File(...),
@@ -52,13 +55,12 @@ async def handele_upload(
             
         file_size_bytes = os.path.getsize(file_location)
 
-
+        # Just keeps a record of the excel file uploaded, to be used while returing the resutls , and mapping the file in history 
         insert_query = """
             INSERT INTO uploads (user_id, filename, s3_key, size_bytes)
             VALUES (%s::uuid, %s, %s, %s)
             RETURNING id;
         """
-        
         cursor.execute(insert_query, (current_user_id, user_file.filename, file_location, file_size_bytes))
         
         new_upload_id = cursor.fetchone()['id']
@@ -66,13 +68,15 @@ async def handele_upload(
         con.commit()
         
         
-        ##request function call
-        request_type = option1
+    
+        ##parsign diffent jobs based on the options selected and queing them in the job queing API
+        request_type = await get_combination_id(option1, option2, option3)
         
+        
+        #genrate requestion based on this shit
         rqest_id = await createRequest(new_upload_id,file_location, request_type)
         
-
-        #return {"message": f"Success! Saved as ID: {new_upload_id}"}
+    
     
         return {
                 "message": "Upload started",
@@ -99,12 +103,13 @@ async def createRequest(upload_id,current_path, request_type):
     con = getdb()
     cursor = con.cursor()   
     try: 
-
+        ##gettign the number of jobs
         wb = load_workbook(current_path)
         ws = wb.active
 
         total_rows = sum(1 for _ in ws.iter_rows(min_row=2, values_only=True))
         
+        #will handle almsot everythign thotught the reqeusts 
         insert_query = """INSERT INTO requests (user_id, upload_id, name, total_jobs)
                         VALUES (%s::uuid, %s::uuid, %s, %s)
                         RETURNING id;"""
@@ -113,9 +118,13 @@ async def createRequest(upload_id,current_path, request_type):
         new_rquest_id = cursor.fetchone()['id']
         con.commit()
         
+        ##creatigna a redis varrible with the uuid of reqeust to manage the jobs comletignon 
         redis_conn.set(f"batch:{new_rquest_id}:remaining", total_rows)
         
+        #creatign the inddviaivdual jobs 
         await createJobs(new_rquest_id,current_path, request_type)
+        
+        
         return new_rquest_id
         
     except Exception as e:
@@ -142,12 +151,10 @@ async def createJobs(request_id, current_path,job_type):
     try:
         wb = load_workbook(current_path)
         ws = wb.active
-        count = 2
+        count = 2 #becasue of the header row in excel file
         for row in ws.iter_rows(min_row=2, values_only=True):
             pan_id = row[0]
             pass_id = row[1]
-            
-            
             
             
             insert_query = """INSERT INTO jobs (request_id, row_number) 
@@ -155,8 +162,8 @@ async def createJobs(request_id, current_path,job_type):
                             RETURNING id; """
             cursor.execute(insert_query, (request_id, count))
             new_job_id = cursor.fetchone()['id']
-            con.commit()
             
+            #callign the 2nd api 
             paylod = {
                 "job_id": new_job_id,
                 "pan_id": pan_id,
@@ -166,11 +173,12 @@ async def createJobs(request_id, current_path,job_type):
             }
             
             response = requests.post(api2url, json=paylod)
-            print(response.json())
-           
             
+            #just the itteraton yaar, 
             count +=1
-
+            
+        ##commiting the jobs in db
+        con.commit()
         
     except Exception as e:
         con.rollback()
@@ -188,7 +196,7 @@ async def createJobs(request_id, current_path,job_type):
         
         
         
-
+## contintulsy pings back to chekc the systaus of the request 
 @app.get("/requests/{request_id}/status")
 async def request_status(request_id: str):
 
@@ -215,16 +223,29 @@ async def request_status(request_id: str):
         else:
             remaining = int(remaining)
 
-        completed = row["total_jobs"] - remaining
+        ##using this insted of the compeleted jobs in db , cuase that is being updated once the bathc is compelter , and theis acaily proceesd jobs
+        #not the compelted jobs ,
+        proceessed_job = row["total_jobs"] - remaining
 
         return {
             "request_id": str(row["id"]),
             "name": row["name"],
             "status": row["status"],
             "total_jobs": row["total_jobs"],
-            "completed_jobs": completed
+            "completed_jobs": proceessed_job
         }
 
     finally:
         cursor.close()
         con.close()
+        
+        
+        
+        
+#job parse
+async def get_combination_id(opt1, opt2, opt3):
+    total = 0
+    if opt1: total += 1
+    if opt2: total += 2
+    if opt3: total += 4
+    return total

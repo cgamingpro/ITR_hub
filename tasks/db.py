@@ -1,6 +1,7 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+#get's conenciton to the postgress server for now 
 def getdb():
     
     while True:

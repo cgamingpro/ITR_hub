@@ -8,120 +8,174 @@ from db import getdb
 from rediscon import redis_conn
 
 
-
+# returns the whole reult , it's not parsed in any way or another , that will be handled based on the job Type whiel retrvign datat to create a excel 
+#fiel output for the user 
 def demo(pan_id,pass_id,job_id,request_id):
+    #postgress db connection
     conn = getdb()
     cursor = conn.cursor()
     
-    options = Options()
-    options.binary_location = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    erro_info = None
+    
+    #selenium base Setup , repeats for each Job
+    
+    try:
+        #change the binary here based on OS
+        options = Options()
+        options.binary_location = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
-    prefs = {
-        "credentials_enable_service": False,
-        "profile.password_manager_enabled": False,
-        "profile.password_manager_leak_detection": False
-    }
-    options.add_experimental_option("prefs", prefs)
+        prefs = {
+            "credentials_enable_service": False,
+            "profile.password_manager_enabled": False,
+            "profile.password_manager_leak_detection": False
+        }
+        options.add_experimental_option("prefs", prefs)
 
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option("useAutomationExtension", False)
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option("useAutomationExtension", False)
 
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--start-maximized")
-    options.add_argument("--disable-infobars")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--start-maximized")
+        options.add_argument("--disable-infobars")
 
-    # Headless setup
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1920,1080")
+        # Headless setup
+        options.add_argument("--headless=new")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--window-size=1920,1080")
 
-    service = Service(
-        executable_path="/mnt/f/wg/chrome/chromedriver-win64/chromedriver-win64/chromedriver.exe"
-    )
+        #change the driver path here based on OS and setup 
+        service = Service(
+            executable_path="/mnt/f/wg/chrome/chromedriver-win64/chromedriver-win64/chromedriver.exe"
+        )
 
-    driver = webdriver.Chrome(service=service, options=options)
+        driver = webdriver.Chrome(service=service, options=options)
 
-    driver.execute_script(
-        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-    )
+        driver.execute_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        )
+        #change the binary here based on OS
+        options = Options()
+        options.binary_location = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
-    # ---------- open site ----------
-    driver.get("https://eportal.incometax.gov.in/iec/foservices/#/login")
-    time.sleep(5)
+        prefs = {
+            "credentials_enable_service": False,
+            "profile.password_manager_enabled": False,
+            "profile.password_manager_leak_detection": False
+        }
+        options.add_experimental_option("prefs", prefs)
 
-    # ---------- username ----------
-    driver.find_element(By.XPATH, "//input[@id='panAdhaarUserId']").send_keys(pan_id)
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option("useAutomationExtension", False)
 
-    driver.find_element(By.XPATH, "//span[contains(text(),' Continue ')]").click()
-    time.sleep(2)
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--start-maximized")
+        options.add_argument("--disable-infobars")
 
-    # ---------- password mode ----------
-    driver.find_element(By.XPATH, "//input[@id='passwordCheckBox-input']").click()
-    time.sleep(3)
+        # Headless setup
+        options.add_argument("--headless=new")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--window-size=1920,1080")
 
-    # ---------- password typing ----------
-    pwd = pass_id
-    pw = driver.find_element(By.ID, "loginPasswordField")
+        #change the driver path here based on OS and setup 
+        service = Service(
+            executable_path="/mnt/f/wg/chrome/chromedriver-win64/chromedriver-win64/chromedriver.exe"
+        )
 
-    for c in pwd:
-        pw.send_keys(c)
-        time.sleep(0.15)
+        driver = webdriver.Chrome(service=service, options=options)
 
-    time.sleep(2)
-    pw.send_keys(Keys.ENTER)
+        driver.execute_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        )
 
-    time.sleep(3)
+        ##----------base setup for ITR speicialflay ends 
+        
+        # ---------- open site ----------
+        driver.get("https://eportal.incometax.gov.in/iec/foservices/#/login")
+        time.sleep(5)
 
-    # ---------- login here popup ----------
-    notices = driver.find_elements(By.XPATH, "//button[contains(text(),'Login Here')]")
-    if len(notices) > 0:
-        notices[0].click()
+        # ---------- username ----------
+        driver.find_element(By.XPATH, "//input[@id='panAdhaarUserId']").send_keys(pan_id)
+
+        driver.find_element(By.XPATH, "//span[contains(text(),' Continue ')]").click()
         time.sleep(2)
 
-    # ---------- navigation ----------
-    time.sleep(2)
+        # ---------- password mode ----------
+        driver.find_element(By.XPATH, "//input[@id='passwordCheckBox-input']").click()
+        time.sleep(3)
 
-    driver.find_element(By.XPATH, "//span[contains(text(),' Services')]").click()
-    driver.find_element(By.XPATH, "//span[contains(text(),' Refund Status')]").click()
+        # ---------- password typing ----------
+        pwd = pass_id
+        pw = driver.find_element(By.ID, "loginPasswordField")
 
-    time.sleep(2)
+        for c in pwd:
+            pw.send_keys(c)
+            time.sleep(0.15)
 
-    driver.find_element(By.XPATH, "//mat-select[@formcontrolname]").click()
+        time.sleep(2)
+        pw.send_keys(Keys.ENTER)
 
-    driver.find_element(
-        By.XPATH,
-        "//span[@class='mdc-list-item__primary-text' and contains(text(),'2023-24')]"
-    ).click()
+        time.sleep(3)
 
-    driver.find_element(
-        By.XPATH,
-        "//button[contains(text(),'Submit') and @class='large-button-primary']"
-    ).click()
+        # ---------- login here popup ----------
+        notices = driver.find_elements(By.XPATH, "//button[contains(text(),'Login Here')]")
+        if len(notices) > 0:
+            notices[0].click()
+            time.sleep(2)
 
-    time.sleep(2)
+        # ---------- navigation ----------
+        time.sleep(2)
 
-    status = driver.find_element(
-        By.XPATH,
-        "(//th[text()=' Status ']/parent::tr/following-sibling::tr//td)[1]"
-    ).text
+        driver.find_element(By.XPATH, "//span[contains(text(),' Services')]").click()
+        driver.find_element(By.XPATH, "//span[contains(text(),' Refund Status')]").click()
 
-    print("Refund status:", status)
+        time.sleep(2)
+
+        driver.find_element(By.XPATH, "//mat-select[@formcontrolname]").click()
+
+        driver.find_element(
+            By.XPATH,
+            "//span[@class='mdc-list-item__primary-text' and contains(text(),'2023-24')]"
+        ).click()
+
+        driver.find_element(
+            By.XPATH,
+            "//button[contains(text(),'Submit') and @class='large-button-primary']"
+        ).click()
+
+        time.sleep(2)
+
+        status = driver.find_element(
+            By.XPATH,
+            "(//th[text()=' Status ']/parent::tr/following-sibling::tr//td)[1]"
+        ).text
+
+        print("Refund status:", status)
     
+    except Exception as e:
+        erro_info = str(e)
     
-    
+    finally: 
+        driver.quit()
+        
     ## end =-== seleniunmm 
     
-    
-    
-    insert_query = """INSERT INTO job_results (job_id, success, error , output)
+    if erro_info is not None:
+        insert_query = """INSERT INTO job_results (job_id, success, error , output)
                     VALUES (%s::uuid, %s, %s, %s)
                     RETURNING id;"""
-    cursor.execute(insert_query, (job_id, True, None, status))
-    conn.commit()
-    
-    
+        cursor.execute(insert_query, (job_id, False, erro_info, None))
+        conn.commit()
+        return False
+    else:
+        insert_query = """INSERT INTO job_results (job_id, success, error , output)
+                        VALUES (%s::uuid, %s, %s, %s)
+                        RETURNING id;"""
+        cursor.execute(insert_query, (job_id, True, None, status))
+        conn.commit()
     
     
     remaining = redis_conn.decr(f"batch:{request_id}:remaining")

@@ -1,6 +1,9 @@
 from rediscon import redis_conn
 from db import getdb
 
+##handles all the shit that happens once a job is complterd  , 
+
+##works on reids publish and subscribe
 pubsub = redis_conn.pubsub()
 pubsub.subscribe("batch_complete")
 
