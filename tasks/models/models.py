@@ -7,6 +7,7 @@ class Job(BaseModel):
     pan_id: str
     pass_id: str
     job_code: int
+    request_id: str
     
     
     

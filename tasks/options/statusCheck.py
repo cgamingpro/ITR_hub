@@ -5,10 +5,11 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from db import getdb
+from rediscon import redis_conn
 
 
 
-def demo(pan_id,pass_id,job_id):
+def demo(pan_id,pass_id,job_id,request_id):
     conn = getdb()
     cursor = conn.cursor()
     
@@ -119,6 +120,15 @@ def demo(pan_id,pass_id,job_id):
                     RETURNING id;"""
     cursor.execute(insert_query, (job_id, True, None, status))
     conn.commit()
+    
+    
+    
+    
+    remaining = redis_conn.decr(f"batch:{request_id}:remaining")
+
+    if remaining <= 0:
+        redis_conn.publish("batch_complete", request_id)
+        
     
     
     return True

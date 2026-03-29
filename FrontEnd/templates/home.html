@@ -1,62 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S3 File Upload</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>File Upload</title>
+
+<style>
+
+body{
+    font-family: Arial;
+}
+
+.container{
+    display:flex;
+    gap:40px;
+}
+
+.left{
+    flex:1;
+}
+
+.right{
+    width:350px;
+    border-left:1px solid #ccc;
+    padding-left:20px;
+}
+
+.request-card{
+    border:1px solid #ddd;
+    padding:10px;
+    margin-bottom:10px;
+    border-radius:6px;
+}
+
+</style>
 </head>
+
 <body>
-    <h2>Upload your file and select options</h2>
-    
-    <form id="uploadForm">
-        
-        <label>Select File:</label>
-        <input type="file" name="user_file" required><br><br>
-        
-        <label>Options:</label><br>
-        <input type="checkbox" name="option1" value="true"> Option 1<br>
-        <input type="checkbox" name="option2" value="true"> Option 2<br>
-        <input type="checkbox" name="option3" value="true"> Option 3<br>
-        <input type="checkbox" name="option4" value="true"> Option 4<br><br>
-        
-        <button type="submit">Submit to S3</button>
-    </form>
 
-    <h4 id="statusMessage" style="color: blue;"></h4>
+<div class="container">
 
-    <script>
-        // Listen for the user to click the submit button
-        document.getElementById("uploadForm").addEventListener("submit", async function(event) {
-            
-            // CRITICAL: This stops the browser from reloading the page!
-            event.preventDefault(); 
+<div class="left">
 
-            // Tell the user we are working on it
-            document.getElementById("statusMessage").innerText = "Uploading... please wait.";
+<h2>Upload your file</h2>
 
-            // Gather all the file and checkbox data from the form
-            let formData = new FormData(this);
+<form id="uploadForm">
 
-            try {
-                // Send the data to your FastAPI /upload route in the background
-                let response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
+<label>Select File:</label>
+<input type="file" name="user_file" required>
+<br><br>
 
-                // Wait for your Python code to send back that JSON {"message": "..."}
-                let result = await response.json();
+<label>Options:</label><br>
 
-                // Update the text on the page with the success message!
-                document.getElementById("statusMessage").innerText = result.message;
-                document.getElementById("statusMessage").style.color = "green";
+<input type="checkbox" name="option1" value="true"> Option 1<br>
+<input type="checkbox" name="option2" value="true"> Option 2<br>
+<input type="checkbox" name="option3" value="true"> Option 3<br>
+<input type="checkbox" name="option4" value="true"> Option 4<br>
 
-            } catch (error) {
-                // If something breaks, show an error
-                document.getElementById("statusMessage").innerText = "Something went wrong!";
-                document.getElementById("statusMessage").style.color = "red";
-            }
-        });
-    </script>
+<br>
+
+<button type="submit">Submit</button>
+
+</form>
+
+<h4 id="statusMessage"></h4>
+
+</div>
+
+
+<div class="right">
+
+<h3>Requests</h3>
+
+<div id="requestList"></div>
+
+</div>
+
+</div>
+
+
+
+<script>
+
+let polling = {}
+
+document.getElementById("uploadForm").addEventListener("submit", async function(event){
+
+    event.preventDefault()
+
+    document.getElementById("statusMessage").innerText="Uploading..."
+
+    let formData = new FormData(this)
+
+    let response = await fetch("/upload",{
+        method:"POST",
+        body:formData
+    })
+
+    let result = await response.json()
+
+    document.getElementById("statusMessage").innerText=result.message
+
+    const filename = formData.get("user_file").name
+
+    addRequest(result.request_id,filename)
+
+    startPolling(result.request_id)
+
+})
+
+
+function addRequest(id,filename){
+
+    const list=document.getElementById("requestList")
+
+    const card=document.createElement("div")
+
+    card.className="request-card"
+    card.id="req-"+id
+
+    card.innerHTML=`
+        <b>${filename}</b><br>
+        id: ${id}<br>
+        status: <span class="status">queued</span><br>
+        progress: <span class="progress">0/0</span>
+    `
+
+    list.prepend(card)
+
+}
+
+
+
+async function fetchStatus(request_id){
+
+    const res = await fetch(`/requests/${request_id}/status`)
+
+    if(!res.ok) return
+
+    const data = await res.json()
+
+    const card = document.getElementById("req-"+request_id)
+
+    if(!card) return
+
+    card.querySelector(".status").innerText=data.status
+
+    card.querySelector(".progress").innerText=
+        data.completed_jobs + "/" + data.total_jobs
+
+    if(data.status=="completed" || data.status=="failed"){
+        clearInterval(polling[request_id])
+    }
+
+}
+
+
+
+function startPolling(id){
+
+    fetchStatus(id)
+
+    polling[id]=setInterval(()=>{
+        fetchStatus(id)
+    },5000)
+
+}
+
+</script>
+
 </body>
 </html>
