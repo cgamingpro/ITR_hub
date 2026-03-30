@@ -1,0 +1,68 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Launch Full Project",
+            "dependsOn": [
+                "1. Tasks API",
+                "2. RQ Worker",
+                "3. Redis Server",
+                "4. FrontEnd API",
+                "5. FrontEnd Listener"
+            ],
+            "dependsOrder": "parallel",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        },
+        {
+            "label": "1. Tasks API",
+            "type": "shell",
+            "command": "source ${workspaceFolder}/.venvL/bin/activate && cd tasks && uvicorn main:app --reload",
+            "presentation": {
+                "group": "backend",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "2. RQ Worker",
+            "type": "shell",
+            "command": "source ${workspaceFolder}/.venvL/bin/activate && cd tasks && rq worker",
+            "presentation": {
+                "group": "backend",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "3. Redis Server",
+            "type": "shell",
+            "command": "redis-server",
+            "presentation": {
+                "group": "database",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "4. FrontEnd API",
+            "type": "shell",
+            "command": "source ${workspaceFolder}/.venvL/bin/activate && cd FrontEnd && uvicorn main:app --port 8001 --reload",
+            "presentation": {
+                "group": "frontend",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "5. FrontEnd Listener",
+            "type": "shell",
+            "command": "source ${workspaceFolder}/.venvL/bin/activate && cd FrontEnd && python listner.py",
+            "presentation": {
+                "group": "frontend",
+                "panel": "dedicated"
+            }
+        }
+    ]
+}

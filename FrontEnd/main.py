@@ -1,11 +1,14 @@
+from datetime import time
 import traceback
 from openpyxl import Workbook, load_workbook
 from fastapi import FastAPI, File, HTTPException, UploadFile, Form, Request
 from fastapi.templating import Jinja2Templates
-import shutil,os
+import shutil
+import os
 from rediscon import redis_conn
 import requests
 from db import getdb
+from datetime import datetime
 import data
 
 
@@ -23,6 +26,7 @@ os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 
 #Here just for testing , currently esists in DB, manually added
 current_user_id = "9d7d0d52-c450-4cbc-a148-f0fe49e6b3e5" 
+current_user_mail = "test@mail.com"
 
 #main end point but i don't give much fkk
 @app.get("/")
@@ -41,13 +45,19 @@ async def handele_upload(
     con = getdb()
     cursor = con.cursor()
     
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_name = os.path.basename(user_file.filename) 
+    unique_filename = f"{current_user_id}_{timestamp}_{safe_name}"
+    file_location = os.path.join(UPLOAD_DIRECTORY, unique_filename)
     
     try:
         
         ## fiel uploaded succkelssy in db and we got acess now 
         
+        filename = unique_filename
+        print(f"Saving file to: {filename}")
         
-        file_location = f"{UPLOAD_DIRECTORY}/{user_file.filename}"
+        # file_location = f"{UPLOAD_DIRECTORY}/{filename}"
     
         # Open a new file on your hard drive and copy the incoming bytes into it
         with open(file_location, "wb+") as file_object:
@@ -61,7 +71,7 @@ async def handele_upload(
             VALUES (%s::uuid, %s, %s, %s)
             RETURNING id;
         """
-        cursor.execute(insert_query, (current_user_id, user_file.filename, file_location, file_size_bytes))
+        cursor.execute(insert_query, (current_user_id, filename, file_location, file_size_bytes))
         
         new_upload_id = cursor.fetchone()['id']
         
@@ -172,7 +182,7 @@ async def createJobs(request_id, current_path,job_type):
                 "request_id": request_id
             }
             
-            response = requests.post(api2url, json=paylod)
+            requests.post(api2url, json=paylod)
             
             #just the itteraton yaar, 
             count +=1
