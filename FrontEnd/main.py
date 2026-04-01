@@ -31,7 +31,7 @@ current_user_mail = "test@mail.com"
 #main end point but i don't give much fkk
 @app.get("/")
 async def home(request: Request):
-    return templates.TemplateResponse("home.html", {"request": request})
+    return templates.TemplateResponse("index.html", {"request": request})
 
 #for the Excel upload and completer job queing , 
 @app.post("/upload")
