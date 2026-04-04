@@ -10,6 +10,7 @@ import requests
 from db import getdb
 from datetime import datetime
 import data
+from fastapi.responses import FileResponse, HTMLResponse
 
 
 ##url for job queuing api 
@@ -167,10 +168,10 @@ async def createJobs(request_id, current_path,job_type):
             pass_id = row[1]
             
             
-            insert_query = """INSERT INTO jobs (request_id, row_number) 
-                            VALUES (%s::uuid, %s)
+            insert_query = """INSERT INTO jobs (request_id, row_number ,job_type) 
+                            VALUES (%s::uuid, %s , %s)
                             RETURNING id; """
-            cursor.execute(insert_query, (request_id, count))
+            cursor.execute(insert_query, (request_id, count, job_type))
             new_job_id = cursor.fetchone()['id']
             
             #callign the 2nd api 
@@ -203,6 +204,7 @@ async def createJobs(request_id, current_path,job_type):
         
         cursor.close()
         con.close()
+        wb.close()
         
         
         
@@ -249,7 +251,71 @@ async def request_status(request_id: str):
         cursor.close()
         con.close()
         
+    
+    
+    
+@app.get("/requests/recent")
+async def get_recent_requests():
+    con = getdb()
+    cursor = con.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT id, name, total_jobs, status, created_at
+            FROM requests
+            WHERE user_id = %s::uuid
+            AND created_at >= NOW() - INTERVAL '2 days'
+            ORDER BY created_at ASC
+        """, (current_user_id,))
+
+        rows = cursor.fetchall()
+
+        results = []
+        for r in rows:
+            results.append({
+                "id": str(r["id"]),
+                "name": r["name"],
+                "status": r["status"],
+                "total_jobs": r["total_jobs"]
+            })
+
+        return results
+
+    finally:
+        cursor.close()
+        con.close()    
         
+        
+
+@app.get("/requests/{request_id}/download")
+async def download_request_file(request_id: str):
+
+    con = getdb()
+    cursor = con.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT u.filename, u.s3_key
+            FROM requests r
+            JOIN uploads u ON r.upload_id = u.id
+            WHERE r.id = %s::uuid
+            AND r.user_id = %s::uuid
+        """, (request_id, current_user_id))
+
+        row = cursor.fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="File not found")
+
+        return FileResponse(
+            path=row["s3_key"],
+            filename=row["filename"],
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    finally:
+        cursor.close()
+        con.close()
         
         
 #job parse

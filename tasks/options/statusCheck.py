@@ -20,41 +20,7 @@ def demo(pan_id,pass_id,job_id,request_id):
     #selenium base Setup , repeats for each Job
     
     try:
-        #change the binary here based on OS
-        options = Options()
-        options.binary_location = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-
-        prefs = {
-            "credentials_enable_service": False,
-            "profile.password_manager_enabled": False,
-            "profile.password_manager_leak_detection": False
-        }
-        options.add_experimental_option("prefs", prefs)
-
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option("useAutomationExtension", False)
-
-        options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_argument("--start-maximized")
-        options.add_argument("--disable-infobars")
-
-        # Headless setup
-        options.add_argument("--headless=new")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--window-size=1920,1080")
-
-        #change the driver path here based on OS and setup 
-        service = Service(
-            executable_path="/mnt/f/wg/chrome/chromedriver-win64/chromedriver-win64/chromedriver.exe"
-        )
-
-        driver = webdriver.Chrome(service=service, options=options)
-
-        driver.execute_script(
-            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-        )
+        
         #change the binary here based on OS
         options = Options()
         options.binary_location = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
@@ -169,13 +135,14 @@ def demo(pan_id,pass_id,job_id,request_id):
                     RETURNING id;"""
         cursor.execute(insert_query, (job_id, False, erro_info, None))
         conn.commit()
-        return False
+        sucess =  False
     else:
         insert_query = """INSERT INTO job_results (job_id, success, error , output)
                         VALUES (%s::uuid, %s, %s, %s)
                         RETURNING id;"""
         cursor.execute(insert_query, (job_id, True, None, status))
         conn.commit()
+        sucess =  True
     
     
     remaining = redis_conn.decr(f"batch:{request_id}:remaining")
@@ -185,6 +152,6 @@ def demo(pan_id,pass_id,job_id,request_id):
         
     
     
-    return True
+    return sucess   
     
     
