@@ -17,6 +17,7 @@ def demo(pan_id,pass_id,job_id,request_id):
     cursor = conn.cursor()
     
     erro_info = None
+    driver = None 
     
     #selenium base Setup , repeats for each Job
     
