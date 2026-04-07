@@ -1,7 +1,7 @@
 import os
 
 # job api usr
-API2URL = "http://localhost:8000/job"
+API2URL = "http://localhost:8080/job"
 
 # =========================
 # PostgreSQL config
