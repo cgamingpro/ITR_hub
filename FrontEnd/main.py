@@ -24,7 +24,7 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 # Replace with FireBase cloud Storage 
-UPLOAD_DIRECTORY = "local_storage"
+UPLOAD_DIRECTORY = os.getenv("STORAGE_PATH", "local_storage")
 os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 
 
