@@ -1,7 +1,7 @@
 from datetime import time
 import traceback
 from openpyxl import Workbook, load_workbook
-from fastapi import FastAPI, File, HTTPException, UploadFile, Form, Request
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, Form, Request
 from fastapi.templating import Jinja2Templates
 import shutil
 import os
@@ -11,6 +11,9 @@ from db import getdb
 from datetime import datetime
 import data
 from fastapi.responses import FileResponse, HTMLResponse
+from models.models import Job, user ,userLogin
+import util , auth
+from fastapi.security import  OAuth2PasswordRequestForm
 
 
 ##url for job queuing api 
@@ -25,9 +28,8 @@ UPLOAD_DIRECTORY = "local_storage"
 os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 
 
-#Here just for testing , currently esists in DB, manually added
-current_user_id = "9d7d0d52-c450-4cbc-a148-f0fe49e6b3e5" 
-current_user_mail = "test@mail.com"
+
+
 
 #main end point but i don't give much fkk
 @app.get("/")
@@ -37,6 +39,7 @@ async def home(request: Request):
 #for the Excel upload and completer job queing , 
 @app.post("/upload")
 async def handele_upload(
+    current_user_id = Depends(auth.get_current_user),
     user_file: UploadFile = File(...),
     option1: bool = Form(False),
     option2: bool = Form(False),
@@ -85,7 +88,7 @@ async def handele_upload(
         
         
         #genrate requestion based on this shit
-        rqest_id = await createRequest(new_upload_id,file_location, request_type)
+        rqest_id = await createRequest(current_user_id, new_upload_id, file_location, request_type)
         
     
     
@@ -110,7 +113,7 @@ async def handele_upload(
         
         
 
-async def createRequest(upload_id,current_path, request_type):
+async def createRequest(current_user_id: str, upload_id: str, current_path: str, request_type: str):
     con = getdb()
     cursor = con.cursor()   
     try: 
@@ -133,7 +136,7 @@ async def createRequest(upload_id,current_path, request_type):
         redis_conn.set(f"batch:{new_rquest_id}:remaining", total_rows)
         
         #creatign the inddviaivdual jobs 
-        await createJobs(new_rquest_id,current_path, request_type)
+        await createJobs(current_user_id,new_rquest_id,current_path, request_type)
         
         
         return new_rquest_id
@@ -155,7 +158,7 @@ async def createRequest(upload_id,current_path, request_type):
     
 
 
-async def createJobs(request_id, current_path,job_type):
+async def createJobs(current_user_id: str, request_id: str, current_path: str, job_type: str):
     con = getdb()
     cursor = con.cursor()
     
@@ -253,9 +256,11 @@ async def request_status(request_id: str):
         
     
     
-    
+#last two day's resquest
 @app.get("/requests/recent")
-async def get_recent_requests():
+async def get_recent_requests(
+    current_user_id = Depends(auth.get_current_user)
+):
     con = getdb()
     cursor = con.cursor()
 
@@ -286,9 +291,9 @@ async def get_recent_requests():
         con.close()    
         
         
-
+#downaodl the file connected ot that reqeust , with the updated data in it
 @app.get("/requests/{request_id}/download")
-async def download_request_file(request_id: str):
+async def download_request_file(request_id: str , current_user_id = Depends(auth.get_current_user)):
 
     con = getdb()
     cursor = con.cursor()
@@ -317,7 +322,109 @@ async def download_request_file(request_id: str):
         cursor.close()
         con.close()
         
+#keep it hidden for now , will be used for user registration and authentication later on , just a dummy one for now
+@app.post("/userreg")
+async def user_registration(user: user):
+    con = getdb()
+    cursor = con.cursor()
+
+    try:
         
+        #pass hashing
+        if len(user.password.encode("utf-8")) > 72:
+            raise HTTPException(
+                status_code=400,
+                detail="Password too long (max 72 bytes)"
+                )
+        
+        hashed_password = util.hash(user.password)
+        
+        
+        cursor.execute("""
+            INSERT INTO users (email, hashed_password, name)
+            VALUES (%s, %s, %s)
+            RETURNING id;
+        """, (user.email, hashed_password, user.name))
+
+        new_user_id = cursor.fetchone()['id']
+        con.commit()
+
+        return {"message": "User registered successfully", "user_id": str(new_user_id)}
+
+    except Exception as e:
+        con.rollback()
+        
+        print("\n--- DATABASE ERROR DETAILS ---")
+        traceback.print_exc() 
+        print("------------------------------\n")
+        
+        raise HTTPException(status_code=500, detail="Failed to register user., maybe email already exists.")
+
+    finally:
+        cursor.close()
+        con.close()
+        
+        
+#retriving the user data
+@app.get("/users/me")        
+async def get_user(user_id = Depends(auth.get_current_user)):
+    con = getdb()
+    cursor = con.cursor()
+
+    try: 
+        cursor.execute("""
+            SELECT id, email, name
+            FROM users
+            WHERE id = %s::uuid
+        """, (user_id,))
+
+        row = cursor.fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return {
+            "id": str(row["id"]),
+            "email": row["email"],
+            "name": row["name"]
+        }
+
+    finally:
+        cursor.close()
+        con.close()
+        
+
+@app.post('/login')
+def login(user_cred: OAuth2PasswordRequestForm = Depends()):
+    con = getdb()
+    cursor = con.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT id, email, hashed_password
+            FROM users
+            WHERE email = %s
+        """, (user_cred.username,))
+
+        row = cursor.fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Verify password
+        if not util.verify(user_cred.password, row["hashed_password"]):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        
+        access_token = auth.create_acess_token(data={"user_id": str(row["id"])})
+        
+        return {"access_token": access_token , "token_type": "bearer"}
+
+    finally:
+        cursor.close()
+        con.close()
+    
+
 #job parse
 async def get_combination_id(opt1, opt2, opt3):
     total = 0

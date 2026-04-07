@@ -18,7 +18,7 @@ for message in pubsub.listen():
     con = getdb()
     cursor = con.cursor()
 
-    
+        #---- gotta combien all thesee querery into one shit ig     
 
     #get the data of hte jobs that just got osmsoelted 
     cursor.execute("""SELECT 
@@ -51,7 +51,7 @@ for message in pubsub.listen():
     (request_id,))
     file_info = cursor.fetchone()
     
-    
+    #updatiogn the origianl uploaded fiel and then update thee same again 
     wb = load_workbook(file_info['s3_key'])
     ws = wb.active
     for job in job_results:
@@ -80,13 +80,6 @@ for message in pubsub.listen():
         WHERE id = %s::uuid
     """, (request_id,))
     
-    # print(f"\n--- Request {request_id} Completed ---")
-    # print(f"File: {file_info['filename']} (Size: {file_info['size_bytes']} bytes)")
-    # print("Job Results:")
-    # for job in job_results:
-    #     print(f"  Job ID: {job['job_id']}, Row: {job['row_number']}, Success: {job['success']}, Error: {job['error']}, Output: {job['output']}")
-    # print("-----------------------------------\n")
-
     con.commit()
     wb.save(file_info['s3_key'])
     wb.close()
