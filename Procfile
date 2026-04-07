@@ -1,11 +1,11 @@
-# Internal API (tasks) – only accessible by other services
-tasks-api: cd tasks && uvicorn main:app --host 0.0.0.0 --port 8000
+# tasks-api (internal)
+tasks-api: cd tasks && uvicorn main:app --host 127.0.0.1 --port 8000
 
-# Background worker for tasks
+# background worker
 rq-worker: cd tasks && rq worker
 
-# Public frontend API – Railway will expose this on $PORT
+# frontend-api (public)
 frontend-api: cd FrontEnd && uvicorn main:app --host 0.0.0.0 --port $PORT
 
-# Listener / background process for frontend
+# frontend listener (internal)
 frontend-listener: cd FrontEnd && python listner.py
