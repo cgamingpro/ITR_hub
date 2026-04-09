@@ -2,7 +2,7 @@ import os
 
 # job api usr
 
-API2URL = os.getenv("TASKS_API_URL", "http://localhost:8080/job")
+API2URL = os.getenv("TASKS_API_URL", "http://localhost:8000/job")
 
 # =========================
 # PostgreSQL config
