@@ -56,6 +56,12 @@ def demo(pan_id,pass_id,job_id,request_id):
 
             # 3. Force Selenium to use the APT driver (bypasses Selenium Manager completely)
             service = Service(executable_path="/usr/bin/chromedriver")
+            
+            print("--- DEBUG INFO ---")
+            print("Does chromium exist?", os.path.exists("/usr/bin/chromium"))
+            print("Does chromedriver exist?", os.path.exists("/usr/bin/chromedriver"))
+            print("------------------")
+            
             driver = webdriver.Chrome(service=service, options=options)
             
             
