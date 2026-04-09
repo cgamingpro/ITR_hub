@@ -1,3 +1,4 @@
+import shutil
 import time
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -29,6 +30,15 @@ def demo(pan_id,pass_id,job_id,request_id):
         rail = os.getenv("ENV")
         if rail is not None and rail == "RAILWAY":
             
+            
+            # 1. Let Python automatically find the paths Nixpacks used
+            chromium_path = shutil.which("chromium") or shutil.which("google-chrome")
+            driver_path = shutil.which("chromedriver")
+            
+            # 2. Hardcode the browser location
+            if chromium_path:
+                options.binary_location = chromium_path
+            
             #options.binary_location = "/usr/bin/chromium"
             prefs = {
                 "credentials_enable_service": False,
@@ -51,7 +61,13 @@ def demo(pan_id,pass_id,job_id,request_id):
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--window-size=1920,1080")
 
-            driver = webdriver.Chrome(options=options)
+            # 4. Explicitly tell Selenium to use the Nix ChromeDriver, NOT the downloaded one
+            if driver_path:
+                service = Service(executable_path=driver_path)
+                driver = webdriver.Chrome(service=service, options=options)
+            else:
+                # Fallback just in case shutil misses it
+                driver = webdriver.Chrome(options=options)
             
             
         else:
