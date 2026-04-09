@@ -29,7 +29,7 @@ def demo(pan_id,pass_id,job_id,request_id):
         rail = os.getenv("ENV")
         if rail is not None and rail == "RAILWAY":
             
-            options.binary_location = "/usr/bin/chromium"
+            #options.binary_location = "/usr/bin/chromium"
             prefs = {
                 "credentials_enable_service": False,
                 "profile.password_manager_enabled": False,

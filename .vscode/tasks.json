@@ -7,8 +7,8 @@
                 "1. Tasks API",
                 "2. RQ Worker",
                 "3. Redis Server",
-                "4. FrontEnd API",
-                "5. FrontEnd Listener"
+                "4. FrontEnd API"
+                // "5. FrontEnd Listener"
             ],
             "dependsOrder": "parallel",
             "group": {
@@ -54,15 +54,15 @@
                 "group": "frontend",
                 "panel": "dedicated"
             }
-        },
-        {
-            "label": "5. FrontEnd Listener",
-            "type": "shell",
-            "command": "source ${workspaceFolder}/.venvL/bin/activate && cd FrontEnd && python listner.py",
-            "presentation": {
-                "group": "frontend",
-                "panel": "dedicated"
-            }
         }
+        // {
+        //     "label": "5. FrontEnd Listener",
+        //     "type": "shell",
+        //     "command": "source ${workspaceFolder}/.venvL/bin/activate && cd FrontEnd && python listner.py",
+        //     "presentation": {
+        //         "group": "frontend",
+        //         "panel": "dedicated"
+        //     }
+        // }
     ]
 }

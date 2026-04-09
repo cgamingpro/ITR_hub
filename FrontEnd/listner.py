@@ -2,6 +2,7 @@ from rediscon import redis_conn
 from db import getdb
 from openpyxl import Workbook, load_workbook
 
+##depricated now , mixed into the main code , but keeping it here for refrence and future use if needed
 ##handles all the shit that happens once a job is complterd  , 
 
 ##works on reids publish and subscribe
