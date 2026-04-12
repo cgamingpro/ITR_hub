@@ -391,7 +391,24 @@ if(loginForm) {
 
 if(logoutBtn) logoutBtn.addEventListener("click", logout);
 
-// ================= BOOT =================
+// ================= BOOT (AUTO-LOGIN HANDLER) =================
+// 1. Create a full-screen blurred overlay to block the login button
+const bootOverlay = document.createElement("div");
+bootOverlay.className = "drop-overlay glass active";
+bootOverlay.style.border = "none"; // Remove the dashed border used for drag & drop
+bootOverlay.style.zIndex = "10000"; // Force it above absolutely everything
+bootOverlay.innerHTML = `
+  <div style="text-align:center">
+    <i class="fa-solid fa-circle-notch fa-spin fa-4x text-primary mb-10"></i>
+    <h2 style="color: white; margin-top: 15px;">Restoring Session...</h2>
+  </div>
+`;
+
+// 2. ONLY show the loading screen if we actually have a token to check
+if (accessToken) {
+  document.body.appendChild(bootOverlay);
+}
+
 async function boot() {
   if (!accessToken) {
     setLoggedInUI(false);
@@ -399,25 +416,35 @@ async function boot() {
   }
 
   try {
+    // Fetch all data while the screen is safely blocked by the overlay
     await loadMe();
     await loadRecentRequests();
     await loadAllRequests(); 
+    
+    // Setup dashboard and show app
     showSection("dashboardSection");
     setLoggedInUI(true);
   } catch (e) {
+    // If the token is expired/invalid, clear it and show the login screen
     logout();
+  } finally {
+    // No matter what happens (success or fail), destroy the loading screen at the end
+    if (document.body.contains(bootOverlay)) {
+      bootOverlay.remove();
+    }
   }
 }
 
 // ================= DRAG & DROP =================
-const overlay = document.createElement("div");
-overlay.className = "drop-overlay glass";
-overlay.innerHTML = `<div style="text-align:center"><i class="fa-solid fa-cloud-arrow-up fa-4x text-primary mb-10"></i><h2>Drop File to Upload</h2></div>`;
-document.body.appendChild(overlay);
+const dropOverlay = document.createElement("div");
+dropOverlay.className = "drop-overlay glass";
+dropOverlay.innerHTML = `<div style="text-align:center"><i class="fa-solid fa-cloud-arrow-up fa-4x text-primary mb-10"></i><h2>Drop File to Upload</h2></div>`;
+document.body.appendChild(dropOverlay);
 
-window.addEventListener("dragenter", () => overlay.classList.add("active"));
-window.addEventListener("dragleave", (e) => { if (e.target === overlay) overlay.classList.remove("active"); });
-window.addEventListener("drop", (e) => { e.preventDefault(); overlay.classList.remove("active"); });
+window.addEventListener("dragenter", () => dropOverlay.classList.add("active"));
+window.addEventListener("dragleave", (e) => { if (e.target === dropOverlay) dropOverlay.classList.remove("active"); });
+window.addEventListener("drop", (e) => { e.preventDefault(); dropOverlay.classList.remove("active"); });
 window.addEventListener("dragover", (e) => e.preventDefault());
 
+// Start the engine
 boot();
