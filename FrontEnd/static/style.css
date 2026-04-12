@@ -78,6 +78,10 @@ body {
   border-left: none;
   border-top: none;
   border-bottom: none;
+  
+  /* ADD THESE TWO LINES */
+  white-space: nowrap; 
+  overflow: hidden; 
 }
 
 .sidebar-header {
@@ -119,6 +123,10 @@ body {
   gap: 15px;
   color: var(--text-muted);
   font-weight: 600;
+  
+  /* ADD THESE TWO LINES */
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .nav-links li i { width: 20px; text-align: center; font-size: 1.1rem; }

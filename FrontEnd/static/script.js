@@ -1,4 +1,5 @@
 let polling = {};
+let knownStatuses = {}; // NEW: Tracks statuses to prevent toast spam
 let accessToken = localStorage.getItem("access_token");
 
 const loginBox = document.getElementById("loginBox");
@@ -37,6 +38,8 @@ setLoggedInUI(false);
 // ================= TOAST NOTIFICATIONS =================
 function showToast(message, type = "info") {
   const container = document.getElementById("toastContainer");
+  if (!container) return; // safety fallback
+  
   const toast = document.createElement("div");
   toast.className = `toast toast-${type} animated fade-in`;
   
@@ -93,14 +96,18 @@ function showSection(sectionId) {
   document.querySelectorAll(".page-section").forEach(sec => {
     sec.classList.remove("active");
   });
-  document.getElementById(sectionId).classList.add("active");
+  
+  const targetSec = document.getElementById(sectionId);
+  if (targetSec) targetSec.classList.add("active");
 
   // Update sidebar active state
   document.querySelectorAll(".nav-links li").forEach(li => li.classList.remove("active"));
-  event?.currentTarget?.classList?.add("active");
+  if (window.event && window.event.currentTarget && window.event.currentTarget.tagName === 'LI') {
+    window.event.currentTarget.classList.add("active");
+  }
 }
 
-sidebarToggle.addEventListener("click", () => {
+sidebarToggle?.addEventListener("click", () => {
   sidebar.classList.toggle("collapsed");
   mainContent.classList.toggle("expanded");
 });
@@ -112,10 +119,11 @@ function logout() {
 
   Object.values(polling).forEach(id => clearInterval(id));
   polling = {};
+  knownStatuses = {}; // Reset tracking so toasts work on next login
 
-  requestList.innerHTML = "";
-  recentRequestList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-inbox fa-2x"></i><p>No active jobs</p></div>`;
-  assistantRequestList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-file-circle-question fa-2x"></i><p>Waiting for input...</p></div>`;
+  if (requestList) requestList.innerHTML = "";
+  if (recentRequestList) recentRequestList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-inbox fa-2x"></i><p>No active jobs</p></div>`;
+  if (assistantRequestList) assistantRequestList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-file-circle-question fa-2x"></i><p>Waiting for input...</p></div>`;
 
   setLoggedInUI(false);
   showToast("Logged out successfully", "info");
@@ -127,14 +135,17 @@ async function loadMe() {
   if (!res.ok) return;
   const user = await res.json();
 
-  userInfo.innerText = user.name;
-  document.getElementById("dashboardName").innerText = `Hey, ${user.name}! 👋`;
-  document.getElementById("dashboardEmail").innerText = user.email;
+  if (userInfo) userInfo.innerText = user.name;
+  
+  const dashName = document.getElementById("dashboardName");
+  if (dashName) dashName.innerText = `Hey, ${user.name}! 👋`;
+  
+  const dashEmail = document.getElementById("dashboardEmail");
+  if (dashEmail) dashEmail.innerText = user.email;
 }
 
 // ================= REQUEST UI =================
 function createRequestCard(req, container) {
-  // Remove empty state if it exists
   const empty = container.querySelector(".empty-state");
   if (empty) empty.remove();
 
@@ -176,13 +187,16 @@ async function fetchStatus(request_id) {
 
   const data = await res.json();
   const cards = document.querySelectorAll(`.request-card[data-req-id="${request_id}"]`);
+  
+  // Track the OLD status before we update it
+  const previousStatus = knownStatuses[request_id];
+  knownStatuses[request_id] = data.status;
+
   if (cards.length === 0) return;
 
   cards.forEach(card => {
     const statusBadge = card.querySelector(".status");
     statusBadge.innerText = data.status;
-    
-    // Update badge styling
     statusBadge.className = `status badge badge-${data.status}`;
     
     card.querySelector(".progress-text").innerText = `${data.completed_jobs}/${data.total_jobs}`;
@@ -192,7 +206,7 @@ async function fetchStatus(request_id) {
     bar.style.width = percent + "%";
 
     if (data.status === "completed") {
-      bar.style.background = "#10b981"; // Green when done
+      bar.style.background = "#10b981"; 
       const downloadDiv = card.querySelector(".download-zone");
       if (!downloadDiv.innerHTML.trim()) {
         downloadDiv.innerHTML = `<button class="btn-success btn-sm w-100"><i class="fa-solid fa-download"></i> Download Report</button>`;
@@ -201,10 +215,18 @@ async function fetchStatus(request_id) {
     }
   });
 
-  if (data.status === "completed" && polling[request_id]) {
-    clearInterval(polling[request_id]);
-    delete polling[request_id];
-    showToast(`Job ${request_id.substring(0,6)} completed!`, "success");
+  if (data.status === "completed") {
+    // Only trigger the toast if it transitioned to completed WHILE we were watching
+    if (previousStatus && previousStatus !== "completed") {
+      // Safely handle potentially missing string methods
+      const idString = request_id ? request_id.toString() : "";
+      showToast(`Job ${idString.substring(0,6)} completed!`, "success");
+    }
+
+    if (polling[request_id]) {
+      clearInterval(polling[request_id]);
+      delete polling[request_id];
+    }
   }
 }
 
@@ -233,10 +255,12 @@ async function loadRecentRequests() {
   if (!res.ok) return;
   const data = await res.json();
   
-  if(data.length === 0) return;
+  if(!data || data.length === 0) return;
 
   recentRequestList.innerHTML = ""; 
-  data.slice(0, 2).forEach(req => {
+  
+  // CHANGED: slice(-3) grabs the 3 NEWEST jobs instead of the 2 oldest ones
+  data.slice(-3).forEach(req => {
     createRequestCard(req, recentRequestList);
     startPolling(req.id);
   });
@@ -247,7 +271,7 @@ async function loadAllRequests() {
   if (!res.ok) return;
   const data = await res.json();
   
-  if(data.length === 0) return;
+  if(!data || data.length === 0) return;
 
   requestList.innerHTML = ""; 
   data.forEach(req => {
@@ -297,7 +321,7 @@ function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentT
     await loadRecentRequests();
     await loadAllRequests();
     
-    if(isAssistant) {
+    if (isAssistant) {
       targetListContainer.innerHTML = "";
       createRequestCard({ id: res.request_id, name: fileInputEl.files[0].name, status: "queued", total_jobs: 0 }, targetListContainer);
     }
@@ -313,57 +337,59 @@ function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentT
   xhr.send(formData);
 }
 
-uploadForm.addEventListener("submit", (e) => handleUpload(e, uploadForm, "fileInput", uploadProgressBlock, uploadProgressBar, uploadPercent, recentRequestList, false));
-assistantForm?.addEventListener("submit", (e) => handleUpload(e, assistantForm, "assistantFileInput", assistantProgress, assistantBar, assistantPercent, assistantRequestList, true));
+if(uploadForm) uploadForm.addEventListener("submit", (e) => handleUpload(e, uploadForm, "fileInput", uploadProgressBlock, uploadProgressBar, uploadPercent, recentRequestList, false));
+if(assistantForm) assistantForm.addEventListener("submit", (e) => handleUpload(e, assistantForm, "assistantFileInput", assistantProgress, assistantBar, assistantPercent, assistantRequestList, true));
 
 // ================= LOGIN =================
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  
-  const btn = loginForm.querySelector('button');
-  const originalText = btn.innerHTML;
-  btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Authenticating...`;
-  btn.disabled = true;
+if(loginForm) {
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    const btn = loginForm.querySelector('button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Authenticating...`;
+    btn.disabled = true;
 
-  const body = new URLSearchParams();
-  body.append("username", loginEmail.value);
-  body.append("password", loginPassword.value);
+    const body = new URLSearchParams();
+    body.append("username", loginEmail.value);
+    body.append("password", loginPassword.value);
 
-  try {
-    const res = await fetch("/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body
-    });
+    try {
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      showToast(data.detail || "Login failed", "error");
+      if (!res.ok) {
+        showToast(data.detail || "Login failed", "error");
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        return;
+      }
+
+      accessToken = data.access_token;
+      localStorage.setItem("access_token", accessToken);
+      showToast("Welcome back!", "success");
+
+      await loadMe();
+      await loadRecentRequests();
+      await loadAllRequests(); 
+
+      showSection("dashboardSection");
+      setLoggedInUI(true);
+    } catch (err) {
+      showToast("Connection error", "error");
+    } finally {
       btn.innerHTML = originalText;
       btn.disabled = false;
-      return;
     }
+  });
+}
 
-    accessToken = data.access_token;
-    localStorage.setItem("access_token", accessToken);
-    showToast("Welcome back!", "success");
-
-    await loadMe();
-    await loadRecentRequests();
-    await loadAllRequests(); 
-
-    showSection("dashboardSection");
-    setLoggedInUI(true);
-  } catch (err) {
-    showToast("Connection error", "error");
-  } finally {
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-  }
-});
-
-logoutBtn?.addEventListener("click", logout);
+if(logoutBtn) logoutBtn.addEventListener("click", logout);
 
 // ================= BOOT =================
 async function boot() {
