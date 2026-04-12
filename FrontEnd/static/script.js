@@ -1,5 +1,5 @@
 let polling = {};
-let knownStatuses = {}; // NEW: Tracks statuses to prevent toast spam
+let knownStatuses = {}; 
 let accessToken = localStorage.getItem("access_token");
 
 const loginBox = document.getElementById("loginBox");
@@ -11,6 +11,7 @@ const loginPassword = document.getElementById("loginPassword");
 
 const logoutBtn = document.getElementById("logoutBtn");
 const sidebarToggle = document.getElementById("sidebarToggle");
+const mobileToggleBtn = document.getElementById("mobileToggleBtn"); // NEW
 const sidebar = document.getElementById("sidebar");
 const mainContent = document.getElementById("mainContent");
 
@@ -38,7 +39,7 @@ setLoggedInUI(false);
 // ================= TOAST NOTIFICATIONS =================
 function showToast(message, type = "info") {
   const container = document.getElementById("toastContainer");
-  if (!container) return; // safety fallback
+  if (!container) return; 
   
   const toast = document.createElement("div");
   toast.className = `toast toast-${type} animated fade-in`;
@@ -51,7 +52,6 @@ function showToast(message, type = "info") {
   
   container.appendChild(toast);
 
-  // Remove after 3 seconds
   setTimeout(() => {
     toast.style.opacity = "0";
     toast.style.transform = "translateX(100%)";
@@ -100,16 +100,24 @@ function showSection(sectionId) {
   const targetSec = document.getElementById(sectionId);
   if (targetSec) targetSec.classList.add("active");
 
-  // Update sidebar active state
   document.querySelectorAll(".nav-links li").forEach(li => li.classList.remove("active"));
   if (window.event && window.event.currentTarget && window.event.currentTarget.tagName === 'LI') {
     window.event.currentTarget.classList.add("active");
+  }
+  
+  // Auto-close sidebar on mobile after clicking a link
+  if (window.innerWidth <= 768) {
+    sidebar.classList.remove("mobile-active");
   }
 }
 
 sidebarToggle?.addEventListener("click", () => {
   sidebar.classList.toggle("collapsed");
   mainContent.classList.toggle("expanded");
+});
+
+mobileToggleBtn?.addEventListener("click", () => {
+  sidebar.classList.toggle("mobile-active");
 });
 
 // ================= LOGOUT =================
@@ -119,7 +127,7 @@ function logout() {
 
   Object.values(polling).forEach(id => clearInterval(id));
   polling = {};
-  knownStatuses = {}; // Reset tracking so toasts work on next login
+  knownStatuses = {}; 
 
   if (requestList) requestList.innerHTML = "";
   if (recentRequestList) recentRequestList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-inbox fa-2x"></i><p>No active jobs</p></div>`;
@@ -188,7 +196,6 @@ async function fetchStatus(request_id) {
   const data = await res.json();
   const cards = document.querySelectorAll(`.request-card[data-req-id="${request_id}"]`);
   
-  // Track the OLD status before we update it
   const previousStatus = knownStatuses[request_id];
   knownStatuses[request_id] = data.status;
 
@@ -216,9 +223,7 @@ async function fetchStatus(request_id) {
   });
 
   if (data.status === "completed") {
-    // Only trigger the toast if it transitioned to completed WHILE we were watching
     if (previousStatus && previousStatus !== "completed") {
-      // Safely handle potentially missing string methods
       const idString = request_id ? request_id.toString() : "";
       showToast(`Job ${idString.substring(0,6)} completed!`, "success");
     }
@@ -259,7 +264,6 @@ async function loadRecentRequests() {
 
   recentRequestList.innerHTML = ""; 
   
-  // CHANGED: slice(-3) grabs the 3 NEWEST jobs instead of the 2 oldest ones
   data.slice(-3).forEach(req => {
     createRequestCard(req, recentRequestList);
     startPolling(req.id);
@@ -392,11 +396,10 @@ if(loginForm) {
 if(logoutBtn) logoutBtn.addEventListener("click", logout);
 
 // ================= BOOT (AUTO-LOGIN HANDLER) =================
-// 1. Create a full-screen blurred overlay to block the login button
 const bootOverlay = document.createElement("div");
 bootOverlay.className = "drop-overlay glass active";
-bootOverlay.style.border = "none"; // Remove the dashed border used for drag & drop
-bootOverlay.style.zIndex = "10000"; // Force it above absolutely everything
+bootOverlay.style.border = "none"; 
+bootOverlay.style.zIndex = "10000"; 
 bootOverlay.innerHTML = `
   <div style="text-align:center">
     <i class="fa-solid fa-circle-notch fa-spin fa-4x text-primary mb-10"></i>
@@ -404,7 +407,6 @@ bootOverlay.innerHTML = `
   </div>
 `;
 
-// 2. ONLY show the loading screen if we actually have a token to check
 if (accessToken) {
   document.body.appendChild(bootOverlay);
 }
@@ -416,19 +418,14 @@ async function boot() {
   }
 
   try {
-    // Fetch all data while the screen is safely blocked by the overlay
     await loadMe();
     await loadRecentRequests();
     await loadAllRequests(); 
-    
-    // Setup dashboard and show app
     showSection("dashboardSection");
     setLoggedInUI(true);
   } catch (e) {
-    // If the token is expired/invalid, clear it and show the login screen
     logout();
   } finally {
-    // No matter what happens (success or fail), destroy the loading screen at the end
     if (document.body.contains(bootOverlay)) {
       bootOverlay.remove();
     }
@@ -442,8 +439,7 @@ dropOverlay.innerHTML = `<div style="text-align:center"><i class="fa-solid fa-cl
 document.body.appendChild(dropOverlay);
 
 window.addEventListener("dragenter", (e) => {
-  // Only show the overlay if they are dragging actual files, not just text
-  if (e.dataTransfer.types.includes("Files")) {
+  if (e.dataTransfer && e.dataTransfer.types.includes("Files")) {
     dropOverlay.classList.add("active");
   }
 });
@@ -458,19 +454,15 @@ window.addEventListener("drop", (e) => {
   e.preventDefault(); 
   dropOverlay.classList.remove("active"); 
 
-  // 1. Grab the file out of the browser's memory
   const files = e.dataTransfer.files;
   if (!files || files.length === 0) return;
 
-  // 2. Figure out which tab is currently active
   const dashboardActive = document.getElementById("dashboardSection").classList.contains("active");
   const targetInput = dashboardActive ? document.getElementById("fileInput") : document.getElementById("assistantFileInput");
   
   if (targetInput) {
-    // 3. Shove the file into the correct HTML input
     targetInput.files = files; 
     
-    // 4. Update the text below the icon so the user sees the filename
     const textElement = targetInput.nextElementSibling;
     if (textElement && textElement.tagName === "P") {
       textElement.innerHTML = `<span style="color: #10b981; font-weight: bold;"><i class="fa-solid fa-check"></i> ${files[0].name} ready</span>`;
@@ -480,5 +472,4 @@ window.addEventListener("drop", (e) => {
   }
 });
 
-// Start the engine
 boot();

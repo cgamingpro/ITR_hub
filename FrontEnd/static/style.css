@@ -78,8 +78,6 @@ body {
   border-left: none;
   border-top: none;
   border-bottom: none;
-  
-  /* ADD THESE TWO LINES */
   white-space: nowrap; 
   overflow: hidden; 
 }
@@ -123,8 +121,6 @@ body {
   gap: 15px;
   color: var(--text-muted);
   font-weight: 600;
-  
-  /* ADD THESE TWO LINES */
   white-space: nowrap;
   overflow: hidden;
 }
@@ -310,7 +306,52 @@ button {
 }
 .drop-overlay.active { opacity: 1; pointer-events: all; }
 
-/* Responsive Grid */
+/* ================= MOBILE RESPONSIVENESS ================= */
+.mobile-header { display: none; }
+
 @media (max-width: 900px) {
   .dashboard-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  /* Show Mobile Header */
+  .mobile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    border-radius: var(--radius);
+  }
+  
+  /* Hide Desktop Toggle */
+  #sidebarToggle { display: none; }
+
+  /* Slide Sidebar Off-Screen */
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+    background: rgba(15, 23, 42, 0.98); 
+    z-index: 1000;
+  }
+
+  /* Slide Sidebar In via JS */
+  .sidebar.mobile-active {
+    transform: translateX(0);
+  }
+
+  /* Expand Main Content to 100% Width */
+  .main {
+    margin-left: 0;
+    width: 100%;
+    padding: 15px;
+  }
+  .main.expanded {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* Optimize Checkboxes & Login Box */
+  .checkbox-group { grid-template-columns: 1fr; }
+  #loginBox { width: 90%; padding: 30px 20px; }
 }
