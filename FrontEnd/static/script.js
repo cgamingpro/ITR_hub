@@ -441,10 +441,44 @@ dropOverlay.className = "drop-overlay glass";
 dropOverlay.innerHTML = `<div style="text-align:center"><i class="fa-solid fa-cloud-arrow-up fa-4x text-primary mb-10"></i><h2>Drop File to Upload</h2></div>`;
 document.body.appendChild(dropOverlay);
 
-window.addEventListener("dragenter", () => dropOverlay.classList.add("active"));
-window.addEventListener("dragleave", (e) => { if (e.target === dropOverlay) dropOverlay.classList.remove("active"); });
-window.addEventListener("drop", (e) => { e.preventDefault(); dropOverlay.classList.remove("active"); });
+window.addEventListener("dragenter", (e) => {
+  // Only show the overlay if they are dragging actual files, not just text
+  if (e.dataTransfer.types.includes("Files")) {
+    dropOverlay.classList.add("active");
+  }
+});
+
+window.addEventListener("dragleave", (e) => { 
+  if (e.target === dropOverlay) dropOverlay.classList.remove("active"); 
+});
+
 window.addEventListener("dragover", (e) => e.preventDefault());
+
+window.addEventListener("drop", (e) => { 
+  e.preventDefault(); 
+  dropOverlay.classList.remove("active"); 
+
+  // 1. Grab the file out of the browser's memory
+  const files = e.dataTransfer.files;
+  if (!files || files.length === 0) return;
+
+  // 2. Figure out which tab is currently active
+  const dashboardActive = document.getElementById("dashboardSection").classList.contains("active");
+  const targetInput = dashboardActive ? document.getElementById("fileInput") : document.getElementById("assistantFileInput");
+  
+  if (targetInput) {
+    // 3. Shove the file into the correct HTML input
+    targetInput.files = files; 
+    
+    // 4. Update the text below the icon so the user sees the filename
+    const textElement = targetInput.nextElementSibling;
+    if (textElement && textElement.tagName === "P") {
+      textElement.innerHTML = `<span style="color: #10b981; font-weight: bold;"><i class="fa-solid fa-check"></i> ${files[0].name} ready</span>`;
+    }
+    
+    showToast(`Attached: ${files[0].name}`, "info");
+  }
+});
 
 // Start the engine
 boot();
