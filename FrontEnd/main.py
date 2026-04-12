@@ -304,7 +304,7 @@ async def get_recent_requests(current_user_id = Depends(auth.get_current_user)):
             FROM requests
             WHERE user_id = %s::uuid
             AND created_at >= NOW() - INTERVAL '2 days'
-            ORDER BY created_at ASC
+            ORDER BY created_at DESC
         """, (current_user_id,))
 
         rows = cursor.fetchall()

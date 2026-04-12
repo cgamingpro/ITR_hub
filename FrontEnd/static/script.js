@@ -7,14 +7,14 @@ const appBox = document.getElementById("appBox");
 const loginForm = document.getElementById("loginForm");
 const loginEmail = document.getElementById("loginEmail");
 const loginPassword = document.getElementById("loginPassword");
-const loginMessage = document.getElementById("loginMessage");
 
 const logoutBtn = document.getElementById("logoutBtn");
+const sidebarToggle = document.getElementById("sidebarToggle");
+const sidebar = document.getElementById("sidebar");
+const mainContent = document.getElementById("mainContent");
 
 const uploadForm = document.getElementById("uploadForm");
 const fileInput = document.getElementById("fileInput");
-
-const statusMessage = document.getElementById("statusMessage");
 
 const uploadProgressBlock = document.getElementById("uploadProgressBlock");
 const uploadProgressBar = document.getElementById("uploadProgressBar");
@@ -22,25 +22,43 @@ const uploadPercent = document.getElementById("uploadPercent");
 
 const requestList = document.getElementById("requestList");
 const recentRequestList = document.getElementById("recentRequestList");
-
 const userInfo = document.getElementById("userInfo");
 
 // assistant
 const assistantForm = document.getElementById("assistantUploadForm");
 const assistantFileInput = document.getElementById("assistantFileInput");
-const assistantStatus = document.getElementById("assistantStatusMessage");
 const assistantBar = document.getElementById("assistantBar");
 const assistantPercent = document.getElementById("assistantPercent");
 const assistantProgress = document.getElementById("assistantProgressBlock");
-const clientTableBody = document.getElementById("clientTableBody");
+const assistantRequestList = document.getElementById("assistantRequestList");
 
 setLoggedInUI(false);
 
+// ================= TOAST NOTIFICATIONS =================
+function showToast(message, type = "info") {
+  const container = document.getElementById("toastContainer");
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type} animated fade-in`;
+  
+  let icon = "fa-circle-info";
+  if (type === "success") icon = "fa-circle-check";
+  if (type === "error") icon = "fa-circle-exclamation";
+
+  toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+  
+  container.appendChild(toast);
+
+  // Remove after 3 seconds
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateX(100%)";
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
 // ================= AUTH HEADERS =================
 function authHeaders() {
-  return accessToken
-    ? { Authorization: "Bearer " + accessToken }
-    : {};
+  return accessToken ? { Authorization: "Bearer " + accessToken } : {};
 }
 
 async function apiFetch(url, options = {}) {
@@ -57,21 +75,35 @@ async function apiFetch(url, options = {}) {
     logout();
     throw new Error("Unauthorized");
   }
-
   return res;
 }
 
-// ================= UI =================
+// ================= UI CONTROLS =================
 function setLoggedInUI(isLoggedIn) {
-  loginBox.classList.toggle("hidden", isLoggedIn);
-  appBox.classList.toggle("hidden", !isLoggedIn);
+  if (isLoggedIn) {
+    loginBox.classList.add("hidden");
+    appBox.classList.remove("hidden");
+  } else {
+    loginBox.classList.remove("hidden");
+    appBox.classList.add("hidden");
+  }
 }
 
 function showSection(sectionId) {
   document.querySelectorAll(".page-section").forEach(sec => {
-    sec.classList.toggle("active", sec.id === sectionId);
+    sec.classList.remove("active");
   });
+  document.getElementById(sectionId).classList.add("active");
+
+  // Update sidebar active state
+  document.querySelectorAll(".nav-links li").forEach(li => li.classList.remove("active"));
+  event?.currentTarget?.classList?.add("active");
 }
+
+sidebarToggle.addEventListener("click", () => {
+  sidebar.classList.toggle("collapsed");
+  mainContent.classList.toggle("expanded");
+});
 
 // ================= LOGOUT =================
 function logout() {
@@ -82,52 +114,57 @@ function logout() {
   polling = {};
 
   requestList.innerHTML = "";
-  recentRequestList.innerHTML = "";
+  recentRequestList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-inbox fa-2x"></i><p>No active jobs</p></div>`;
+  assistantRequestList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-file-circle-question fa-2x"></i><p>Waiting for input...</p></div>`;
 
   setLoggedInUI(false);
-  loginMessage.innerText = "";
+  showToast("Logged out successfully", "info");
 }
 
 // ================= USER =================
 async function loadMe() {
   const res = await apiFetch("/users/me");
+  if (!res.ok) return;
   const user = await res.json();
 
-  userInfo.innerText = `Logged in as ${user.name}`;
-
-  document.getElementById("dashboardName").innerText = "Name: " + user.name;
-  document.getElementById("dashboardEmail").innerText = "Email: " + user.email;
+  userInfo.innerText = user.name;
+  document.getElementById("dashboardName").innerText = `Hey, ${user.name}! 👋`;
+  document.getElementById("dashboardEmail").innerText = user.email;
 }
 
 // ================= REQUEST UI =================
 function createRequestCard(req, container) {
-  let card = document.getElementById("req-" + req.id);
+  // Remove empty state if it exists
+  const empty = container.querySelector(".empty-state");
+  if (empty) empty.remove();
+
+  let card = container.querySelector(`.request-card[data-req-id="${req.id}"]`);
 
   if (!card) {
     card = document.createElement("div");
-    card.className = "request-card";
-    card.id = "req-" + req.id;
+    card.className = "request-card glass animated slide-up";
+    card.dataset.reqId = req.id; 
 
     card.innerHTML = `
-      <b class="req-name"></b>
-      <div>ID: <span class="req-id"></span></div>
-      <div>Status: <span class="status"></span></div>
-      <div>Progress: <span class="progress"></span></div>
-
-      <div class="progress-wrap">
+      <div class="card-header">
+        <b class="req-name"><i class="fa-solid fa-file-excel text-primary"></i> <span></span></b>
+        <span class="status badge badge-queued">queued</span>
+      </div>
+      <div class="card-body">
+        <div class="card-meta">ID: <span class="req-id text-muted"></span></div>
+        <div class="card-meta">Progress: <span class="progress-text text-muted"></span></div>
+      </div>
+      <div class="progress-wrap mt-10">
         <div class="progress-bar"></div>
       </div>
-
-      <div class="download"></div>
+      <div class="download-zone mt-10"></div>
     `;
-
-    container.prepend(card);
+    container.prepend(card); 
   }
 
-  card.querySelector(".req-name").innerText = req.name;
+  card.querySelector(".req-name span").innerText = req.name || "File";
   card.querySelector(".req-id").innerText = req.id;
-  card.querySelector(".status").innerText = req.status;
-  card.querySelector(".progress").innerText = `0/${req.total_jobs || 0}`;
+  card.querySelector(".progress-text").innerText = `0/${req.total_jobs || 0}`;
 
   return card;
 }
@@ -138,94 +175,101 @@ async function fetchStatus(request_id) {
   if (!res.ok) return;
 
   const data = await res.json();
-  const card = document.getElementById("req-" + request_id);
-  if (!card) return;
+  const cards = document.querySelectorAll(`.request-card[data-req-id="${request_id}"]`);
+  if (cards.length === 0) return;
 
-  card.querySelector(".status").innerText = data.status;
-  card.querySelector(".progress").innerText =
-    `${data.completed_jobs}/${data.total_jobs}`;
+  cards.forEach(card => {
+    const statusBadge = card.querySelector(".status");
+    statusBadge.innerText = data.status;
+    
+    // Update badge styling
+    statusBadge.className = `status badge badge-${data.status}`;
+    
+    card.querySelector(".progress-text").innerText = `${data.completed_jobs}/${data.total_jobs}`;
 
-  const bar = card.querySelector(".progress-bar");
-  const percent = data.total_jobs
-    ? Math.round((data.completed_jobs / data.total_jobs) * 100)
-    : 0;
+    const bar = card.querySelector(".progress-bar");
+    const percent = data.total_jobs ? Math.round((data.completed_jobs / data.total_jobs) * 100) : 0;
+    bar.style.width = percent + "%";
 
-  bar.style.width = percent + "%";
+    if (data.status === "completed") {
+      bar.style.background = "#10b981"; // Green when done
+      const downloadDiv = card.querySelector(".download-zone");
+      if (!downloadDiv.innerHTML.trim()) {
+        downloadDiv.innerHTML = `<button class="btn-success btn-sm w-100"><i class="fa-solid fa-download"></i> Download Report</button>`;
+        downloadDiv.querySelector("button").onclick = () => downloadExcel(request_id);
+      }
+    }
+  });
 
-  if (data.status === "completed") {
+  if (data.status === "completed" && polling[request_id]) {
     clearInterval(polling[request_id]);
     delete polling[request_id];
-
-    const downloadDiv = card.querySelector(".download");
-
-    if (!downloadDiv.innerHTML.trim()) {
-      downloadDiv.innerHTML = `<button>Download Excel</button>`;
-      downloadDiv.querySelector("button").onclick = () =>
-        downloadExcel(request_id);
-    }
-
-    // assistant table fill (if backend sends clients)
-    if (data.clients) {
-      fillClientTable(data.clients);
-    }
+    showToast(`Job ${request_id.substring(0,6)} completed!`, "success");
   }
 }
 
 function startPolling(id) {
+  if (polling[id]) return; 
   fetchStatus(id);
   polling[id] = setInterval(() => fetchStatus(id), 5000);
 }
 
 // ================= DOWNLOAD =================
 async function downloadExcel(id) {
+  showToast("Starting download...", "info");
   const res = await apiFetch(`/requests/${id}/download`);
   const blob = await res.blob();
-
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = `${id}.xlsx`;
   a.click();
-
   window.URL.revokeObjectURL(url);
 }
 
-// ================= RECENT REQUESTS (ONLY 2) =================
+// ================= DATA LOADERS =================
 async function loadRecentRequests() {
   const res = await apiFetch("/requests/recent");
+  if (!res.ok) return;
   const data = await res.json();
+  
+  if(data.length === 0) return;
 
-  recentRequestList.innerHTML = "";
-
+  recentRequestList.innerHTML = ""; 
   data.slice(0, 2).forEach(req => {
     createRequestCard(req, recentRequestList);
     startPolling(req.id);
   });
 }
 
-// ================= FULL REQUEST PAGE =================
 async function loadAllRequests() {
   const res = await apiFetch("/requests/recent");
+  if (!res.ok) return;
   const data = await res.json();
+  
+  if(data.length === 0) return;
 
-  requestList.innerHTML = "";
-
+  requestList.innerHTML = ""; 
   data.forEach(req => {
     createRequestCard(req, requestList);
     startPolling(req.id);
   });
 }
 
-// ================= UPLOAD =================
-uploadForm.addEventListener("submit", function (e) {
+// ================= UPLOADERS =================
+function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentText, targetListContainer, isAssistant = false) {
   e.preventDefault();
-
   if (!accessToken) return;
 
-  const formData = new FormData(uploadForm);
+  const fileInputEl = document.getElementById(fileInputId);
+  if (!fileInputEl.files.length) {
+    showToast("Please select a file first", "error");
+    return;
+  }
 
-  uploadProgressBlock.classList.remove("hidden");
-  uploadProgressBar.style.width = "0%";
+  const formData = new FormData(form);
+  progressBlock.classList.remove("hidden");
+  progressBar.style.width = "0%";
 
   const xhr = new XMLHttpRequest();
   xhr.open("POST", "/upload");
@@ -235,118 +279,90 @@ uploadForm.addEventListener("submit", function (e) {
   xhr.upload.onprogress = (e) => {
     if (e.lengthComputable) {
       const p = Math.round((e.loaded / e.total) * 100);
-      uploadProgressBar.style.width = p + "%";
-      uploadPercent.innerText = p + "%";
+      progressBar.style.width = p + "%";
+      percentText.innerText = p + "%";
     }
   };
 
-  xhr.onload = () => {
+  xhr.onload = async () => {
     const res = xhr.response;
-
-    if (!res) return;
-
-    createRequestCard(
-      {
-        id: res.request_id,
-        name: fileInput.files[0].name,
-        status: "queued",
-        total_jobs: 0
-      },
-      recentRequestList
-    );
-
-    startPolling(res.request_id);
-    showSection("requestSection");
-  };
-
-  xhr.send(formData);
-});
-
-// ================= ASSISTANT UPLOAD =================
-assistantForm?.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const formData = new FormData();
-  formData.append("user_file", assistantFileInput.files[0]);
-
-  assistantProgress.classList.remove("hidden");
-
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", "/upload");
-  xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
-  xhr.responseType = "json";
-
-  xhr.upload.onprogress = (e) => {
-    if (e.lengthComputable) {
-      const p = Math.round((e.loaded / e.total) * 100);
-      assistantBar.style.width = p + "%";
-      assistantPercent.innerText = p + "%";
+    if (!res || xhr.status >= 400) {
+      showToast(res?.detail || "Upload failed", "error");
+      progressBlock.classList.add("hidden");
+      return;
     }
-  };
 
-  xhr.onload = () => {
-    const res = xhr.response;
+    showToast("File uploaded successfully!", "success");
 
-    assistantStatus.innerText = "Uploaded";
-
+    await loadRecentRequests();
+    await loadAllRequests();
+    
+    if(isAssistant) {
+      targetListContainer.innerHTML = "";
+      createRequestCard({ id: res.request_id, name: fileInputEl.files[0].name, status: "queued", total_jobs: 0 }, targetListContainer);
+    }
+    
     startPolling(res.request_id);
-    showSection("requestSection");
+
+    setTimeout(() => {
+        progressBlock.classList.add("hidden");
+        form.reset();
+    }, 1500);
   };
 
   xhr.send(formData);
-});
-
-// ================= CLIENT TABLE =================
-function fillClientTable(clients) {
-  clientTableBody.innerHTML = "";
-
-  clients.forEach((c, i) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${i + 1}</td>
-      <td>${c.name || ""}</td>
-      <td>${c.pan || ""}</td>
-      <td>${c.password || ""}</td>
-    `;
-    clientTableBody.appendChild(row);
-  });
 }
+
+uploadForm.addEventListener("submit", (e) => handleUpload(e, uploadForm, "fileInput", uploadProgressBlock, uploadProgressBar, uploadPercent, recentRequestList, false));
+assistantForm?.addEventListener("submit", (e) => handleUpload(e, assistantForm, "assistantFileInput", assistantProgress, assistantBar, assistantPercent, assistantRequestList, true));
 
 // ================= LOGIN =================
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-
-  loginMessage.innerText = "Logging in...";
+  
+  const btn = loginForm.querySelector('button');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Authenticating...`;
+  btn.disabled = true;
 
   const body = new URLSearchParams();
   body.append("username", loginEmail.value);
   body.append("password", loginPassword.value);
 
-  const res = await fetch("/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body
-  });
+  try {
+    const res = await fetch("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (!res.ok) {
-    loginMessage.innerText = data.detail || "Login failed";
-    return;
+    if (!res.ok) {
+      showToast(data.detail || "Login failed", "error");
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+      return;
+    }
+
+    accessToken = data.access_token;
+    localStorage.setItem("access_token", accessToken);
+    showToast("Welcome back!", "success");
+
+    await loadMe();
+    await loadRecentRequests();
+    await loadAllRequests(); 
+
+    showSection("dashboardSection");
+    setLoggedInUI(true);
+  } catch (err) {
+    showToast("Connection error", "error");
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
   }
-
-  accessToken = data.access_token;
-  localStorage.setItem("access_token", accessToken);
-
-  setLoggedInUI(true);
-
-  await loadMe();
-  await loadRecentRequests();
-
-  showSection("dashboardSection");
 });
 
-// ================= SIDEBAR =================
 logoutBtn?.addEventListener("click", logout);
 
 // ================= BOOT =================
@@ -356,26 +372,26 @@ async function boot() {
     return;
   }
 
-  setLoggedInUI(true);
-  await loadMe();
-  await loadRecentRequests();
-  showSection("dashboardSection");
+  try {
+    await loadMe();
+    await loadRecentRequests();
+    await loadAllRequests(); 
+    showSection("dashboardSection");
+    setLoggedInUI(true);
+  } catch (e) {
+    logout();
+  }
 }
-// GLOBAL DRAG DROP OVERLAY
+
+// ================= DRAG & DROP =================
 const overlay = document.createElement("div");
-overlay.className = "drop-overlay";
-overlay.innerHTML = "<h2>Drop File to Upload</h2>";
+overlay.className = "drop-overlay glass";
+overlay.innerHTML = `<div style="text-align:center"><i class="fa-solid fa-cloud-arrow-up fa-4x text-primary mb-10"></i><h2>Drop File to Upload</h2></div>`;
 document.body.appendChild(overlay);
 
-window.addEventListener("dragenter", () => {
-  overlay.classList.add("active");
-});
+window.addEventListener("dragenter", () => overlay.classList.add("active"));
+window.addEventListener("dragleave", (e) => { if (e.target === overlay) overlay.classList.remove("active"); });
+window.addEventListener("drop", (e) => { e.preventDefault(); overlay.classList.remove("active"); });
+window.addEventListener("dragover", (e) => e.preventDefault());
 
-window.addEventListener("dragleave", () => {
-  overlay.classList.remove("active");
-});
-
-window.addEventListener("drop", (e) => {
-  overlay.classList.remove("active");
-});
 boot();

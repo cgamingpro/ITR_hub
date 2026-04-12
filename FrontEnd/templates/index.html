@@ -3,141 +3,184 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JWT Dashboard Upload System</title>
+  <title>ITR Hub | Dashboard</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <link rel="stylesheet" href="/static/style.css" />
   <script src="/static/script.js" defer></script>
 </head>
 <body>
 
-<!-- ================= LOGIN ================= -->
-<div class="box" id="loginBox">
-  <h2>Login</h2>
+<div id="toastContainer" class="toast-container"></div>
+
+<div class="glass box" id="loginBox">
+  <div class="login-header">
+    <i class="fa-solid fa-shield-halved fa-3x" style="color: #38bdf8; margin-bottom: 15px;"></i>
+    <h2>Welcome Back</h2>
+    <p>Sign in to continue to ITR Hub</p>
+  </div>
+  
   <form id="loginForm">
-    <label>Email</label>
-    <input type="email" id="loginEmail" required />
+    <div class="input-group">
+      <i class="fa-solid fa-envelope"></i>
+      <input type="email" id="loginEmail" placeholder="Email Address" required />
+    </div>
 
-    <label>Password</label>
-    <input type="password" id="loginPassword" required />
+    <div class="input-group">
+      <i class="fa-solid fa-lock"></i>
+      <input type="password" id="loginPassword" placeholder="Password" required />
+    </div>
 
-    <button type="submit">Login</button>
+    <button type="submit" class="btn-primary w-100">
+      <i class="fa-solid fa-arrow-right-to-bracket"></i> Secure Login
+    </button>
   </form>
-  <div id="loginMessage" class="message"></div>
 </div>
 
-<!-- ================= APP WRAPPER ================= -->
 <div id="appBox" class="hidden app-wrapper">
 
-  <!-- SIDEBAR -->
-  <div class="sidebar">
-    <h3 class="special">ITR HUB</h3>
+  <nav class="glass sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h3 class="brand-text">ITR HUB</h3>
+      <button id="sidebarToggle" class="icon-btn"><i class="fa-solid fa-bars"></i></button>
+    </div>
 
-    <ul>
-      <li onclick="showSection('dashboardSection')">Dashboard</li>
-      <li onclick="showSection('assistantSection')">Assistant</li>
-      <li onclick="showSection('requestSection')">Requests</li>
-      <li id="logoutBtn" ">Logout</li>
+    <ul class="nav-links">
+      <li onclick="showSection('dashboardSection')" class="active" data-tooltip="Dashboard">
+        <i class="fa-solid fa-chart-pie"></i> <span class="nav-text">Dashboard</span>
+      </li>
+      <li onclick="showSection('assistantSection')" data-tooltip="Assistant">
+        <i class="fa-solid fa-robot"></i> <span class="nav-text">Assistant</span>
+      </li>
+      <li onclick="showSection('requestSection')" data-tooltip="Requests">
+        <i class="fa-solid fa-server"></i> <span class="nav-text">Requests</span>
+      </li>
     </ul>
 
     <div class="sidebar-footer">
-      <span id="userInfo"class="special">Logged in</span>
+      <div class="user-profile" data-tooltip="Profile">
+        <i class="fa-solid fa-circle-user fa-2x user-avatar"></i>
+        <span id="userInfo" class="nav-text user-name">Loading...</span>
+      </div>
+      <button id="logoutBtn" class="btn-danger w-100 mt-10">
+        <i class="fa-solid fa-power-off"></i> <span class="nav-text">Logout</span>
+      </button>
     </div>
-  </div>
+  </nav>
 
-  <!-- MAIN CONTENT -->
-  <div class="main">
+  <main class="main" id="mainContent">
 
-    <!-- ================= DASHBOARD ================= -->
-    <section id="dashboardSection" class="page-section active">
-
-      <div class="box">
-        <h2>Dashboard</h2>
-        <p id="dashboardName">Hey, Welcome  </p>
-        <p id="dashboardEmail">LoginId </p>
+    <section id="dashboardSection" class="page-section active animated fade-in">
+      
+      <div class="welcome-banner glass">
+        <div>
+          <h2 id="dashboardName">Hey, Welcome back! 👋</h2>
+          <p id="dashboardEmail" style="opacity: 0.8;">Loading user details...</p>
+        </div>
       </div>
 
-      <!-- UPLOAD AREA (GLOBAL DRAG DROP) -->
-      <div class="box upload-box">
-        <h3>Drag & Drop Upload</h3>
-
-        <form id="uploadForm">
-          <input type="file" id="fileInput" name="user_file" />
-
-          <div class="checkbox-group">
-            <label><input type="checkbox" name="option1" /> Status Check</label>
-            <label><input type="checkbox" name="option2" /> E-Verify</label>
-            <label><input type="checkbox" name="option3" /> Pending Actions</label>
-            <label><input type="checkbox" name="option4" /> Grievance</label>
+      <div class="dashboard-grid">
+        <div class="glass box upload-box">
+          <div class="box-header">
+            <h3><i class="fa-solid fa-cloud-arrow-up text-primary"></i> Process New File</h3>
           </div>
 
-          <button type="submit">Upload</button>
-        </form>
+          <form id="uploadForm">
+            <div class="file-drop-area">
+              <i class="fa-solid fa-file-excel fa-3x text-primary" style="margin-bottom: 15px;"></i>
+              <input type="file" id="fileInput" name="user_file" required />
+              <p>Choose a file or drag it here</p>
+            </div>
 
-        <div id="uploadProgressBlock" class="hidden">
-          Uploading: <span id="uploadPercent">0%</span>
-          <div class="progress-wrap">
-            <div id="uploadProgressBar" class="progress-bar"></div>
+            <div class="checkbox-group mt-10">
+              <label class="custom-checkbox"><input type="checkbox" name="option1" /> <span>Status Check</span></label>
+              <label class="custom-checkbox"><input type="checkbox" name="option2" /> <span>E-Verify</span></label>
+              <label class="custom-checkbox"><input type="checkbox" name="option3" /> <span>Pending Actions</span></label>
+              <label class="custom-checkbox"><input type="checkbox" name="option4" /> <span>Grievance</span></label>
+            </div>
+
+            <button type="submit" class="btn-primary w-100 mt-10">
+              <i class="fa-solid fa-rocket"></i> Start Processing
+            </button>
+          </form>
+
+          <div id="uploadProgressBlock" class="hidden progress-container mt-10">
+            <div class="progress-header">
+              <span>Uploading...</span>
+              <span id="uploadPercent">0%</span>
+            </div>
+            <div class="progress-wrap">
+              <div id="uploadProgressBar" class="progress-bar progress-bar-striped"></div>
+            </div>
           </div>
         </div>
 
-        <div id="statusMessage" class="message"></div>
-      </div>
-
-      <!-- 2 RECENT REQUESTS ONLY -->
-      <div class="box">
-        <h3>Recent Requests</h3>
-        <div id="recentRequestList"></div>
+        <div class="glass box list-box">
+          <div class="box-header">
+            <h3><i class="fa-solid fa-clock text-primary"></i> Active Jobs</h3>
+          </div>
+          <div id="recentRequestList" class="request-list-container">
+            <div class="empty-state"><i class="fa-solid fa-inbox fa-2x"></i><p>No active jobs</p></div>
+          </div>
+        </div>
       </div>
 
     </section>
 
-    <!-- ================= REQUESTS ================= -->
-    <section id="requestSection" class="page-section">
-      <h2>All Requests (Last 2 Days)</h2>
-      <div id="requestList" class="box"></div>
+    <section id="requestSection" class="page-section animated fade-in">
+      <div class="page-header">
+        <h2><i class="fa-solid fa-server text-primary"></i> All Requests (Last 2 Days)</h2>
+      </div>
+      <div id="requestList" class="glass box list-box full-height"></div>
     </section>
 
-    <!-- ================= ASSISTANT ================= -->
-    <section id="assistantSection" class="page-section">
+    <section id="assistantSection" class="page-section animated fade-in">
+      <div class="page-header">
+        <h2><i class="fa-solid fa-robot text-primary"></i> AI Assistant Mode</h2>
+      </div>
 
-      <h2>Assistant Mode</h2>
+      <div class="dashboard-grid">
+        <div class="glass box upload-box">
+          <div class="box-header">
+            <h3>Feed Assistant</h3>
+          </div>
+          <form id="assistantUploadForm">
+            <div class="file-drop-area">
+              <i class="fa-solid fa-brain fa-3x text-primary" style="margin-bottom: 15px;"></i>
+              <input type="file" id="assistantFileInput" required />
+              <p>Upload document for analysis</p>
+            </div>
+            <button type="submit" class="btn-primary w-100 mt-10">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Process with AI
+            </button>
+          </form>
 
-      <!-- SAME UPLOAD + DROP -->
-      <div class="box">
-        <form id="assistantUploadForm">
-          <input type="file" id="assistantFileInput" />
-
-          <button type="submit">Upload & Process</button>
-        </form>
-
-        <div id="assistantProgressBlock" class="hidden">
-          Uploading: <span id="assistantPercent">0%</span>
-          <div class="progress-wrap">
-            <div id="assistantBar" class="progress-bar"></div>
+          <div id="assistantProgressBlock" class="hidden progress-container mt-10">
+            <div class="progress-header">
+              <span>Uploading...</span>
+              <span id="assistantPercent">0%</span>
+            </div>
+            <div class="progress-wrap">
+              <div id="assistantBar" class="progress-bar progress-bar-striped"></div>
+            </div>
           </div>
         </div>
 
-        <div id="assistantStatusMessage" class="message"></div>
-      </div>
-
-      <!-- CLIENT TABLE OUTPUT -->
-      <div class="box">
-        <h3>Client Data</h3>
-        <table border="1" width="100%">
-          <thead>
-            <tr>
-              <th>S.No</th>
-              <th>Client Name</th>
-              <th>PAN</th>
-              <th>Password</th>
-            </tr>
-          </thead>
-          <tbody id="clientTableBody"></tbody>
-        </table>
+        <div class="glass box list-box">
+          <div class="box-header">
+            <h3><i class="fa-solid fa-bolt text-primary"></i> Latest Output</h3>
+          </div>
+          <div id="assistantRequestList">
+             <div class="empty-state"><i class="fa-solid fa-file-circle-question fa-2x"></i><p>Waiting for input...</p></div>
+          </div>
+        </div>
       </div>
 
     </section>
 
-  </div>
+  </main>
 </div>
 
 </body>
