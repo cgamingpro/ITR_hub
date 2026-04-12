@@ -1,20 +1,41 @@
-/* ================= VARIABLES & BASE ================= */
+/* ================= VARIABLES & BASE (DARK THEME DEFAULT) ================= */
 :root {
   --primary: #0ea5e9;
   --primary-hover: #0284c7;
   --success: #10b981;
   --danger: #ef4444;
   --warning: #f59e0b;
-  --dark-bg: #0f172a;
+  
+  /* Dark Mode Defaults */
+  --body-bg: linear-gradient(135deg, #0f172a, #1e3a8a, #0ea5e9);
   --glass-bg: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.1);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
+  --input-bg: rgba(0, 0, 0, 0.2);
+  --card-bg: rgba(0, 0, 0, 0.15);
+  --card-hover: rgba(0, 0, 0, 0.25);
+  --sidebar-hover: rgba(255, 255, 255, 0.1);
+
   --sidebar-width: 260px;
   --sidebar-collapsed: 80px;
   --radius: 16px;
   --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ================= LIGHT MODE OVERRIDES ================= */
+:root.light-mode {
+  --body-bg: linear-gradient(135deg, #f1f5f9, #e2e8f0, #cbd5e1);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --card-bg: rgba(255, 255, 255, 0.6);
+  --card-hover: rgba(255, 255, 255, 1);
+  --sidebar-hover: rgba(0, 0, 0, 0.05);
+  --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -25,10 +46,11 @@
 }
 
 body {
-  background: linear-gradient(135deg, var(--dark-bg), #1e3a8a, #0ea5e9);
+  background: var(--body-bg);
   color: var(--text-main);
   min-height: 100vh;
   overflow-x: hidden;
+  transition: background 0.4s ease;
 }
 
 /* ================= UTILITIES ================= */
@@ -37,16 +59,18 @@ body {
 .mb-10 { margin-bottom: 15px; }
 .w-100 { width: 100%; }
 .text-primary { color: var(--primary); }
+.text-warning { color: var(--warning); }
 .text-muted { color: var(--text-muted); font-size: 0.9em; }
 
 /* ================= GLASS EFFECT ================= */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+  transition: background 0.4s ease, border-color 0.4s ease;
 }
 
 /* ================= LOGIN CENTER ================= */
@@ -94,7 +118,7 @@ body {
 .brand-text {
   font-weight: 700;
   letter-spacing: 1px;
-  background: linear-gradient(to right, #38bdf8, #fff);
+  background: linear-gradient(to right, #38bdf8, var(--text-main));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -127,12 +151,12 @@ body {
 }
 
 .nav-links li i { width: 20px; text-align: center; font-size: 1.1rem; }
-.nav-links li:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.nav-links li:hover { background: var(--sidebar-hover); color: var(--text-main); }
 .nav-links li.active { background: var(--primary); color: #fff; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4); }
 
 .sidebar-footer { padding: 20px 15px; border-top: 1px solid var(--glass-border); }
 .user-profile { display: flex; align-items: center; gap: 15px; padding: 10px; min-width: 0; }
-.user-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); font-weight: 600; }
 
 /* Collapsed Sidebar State */
 .sidebar.collapsed { width: var(--sidebar-collapsed); }
@@ -142,13 +166,14 @@ body {
 .sidebar.collapsed .nav-links li { padding: 14px; justify-content: center; }
 .sidebar.collapsed .nav-links li i { margin: 0; }
 .sidebar.collapsed .user-profile { justify-content: center; }
+.sidebar.collapsed #themeToggle { padding: 10px; justify-content: center; }
 
 .main {
   margin-left: var(--sidebar-width);
   padding: 30px;
   width: calc(100% - var(--sidebar-width));
   transition: var(--transition);
-  min-width: 0; /* CRITICAL FIX: prevents flex child from blowing out width */
+  min-width: 0; 
 }
 .main.expanded {
   margin-left: var(--sidebar-collapsed);
@@ -165,7 +190,7 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 25px;
   align-items: start;
-  min-width: 0; /* CRITICAL FIX */
+  min-width: 0; 
   width: 100%;
 }
 
@@ -177,65 +202,54 @@ body {
   word-wrap: break-word;
 }
 
-.box { 
-  padding: 25px; 
-  min-width: 0; /* CRITICAL FIX */
-  width: 100%; 
-}
+.box { padding: 25px; min-width: 0; width: 100%; }
 .box-header { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--glass-border); }
 .list-box.full-height { min-height: 70vh; }
 
 /* ================= FORMS & INPUTS ================= */
-.input-group {
-  position: relative;
-  margin-bottom: 15px;
-  width: 100%;
-}
+.input-group { position: relative; margin-bottom: 15px; width: 100%; }
 .input-group i {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
+  position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); transition: color 0.3s;
 }
-input[type="email"], input[type="password"] {
+input[type="email"], input[type="password"], input[type="text"] {
   width: 100%;
   padding: 14px 14px 14px 45px;
   border-radius: 12px;
   border: 1px solid var(--glass-border);
-  background: rgba(0, 0, 0, 0.2);
-  color: white;
+  background: var(--input-bg);
+  color: var(--text-main);
   font-size: 1rem;
   transition: var(--transition);
 }
-input:focus { outline: none; border-color: var(--primary); background: rgba(0, 0, 0, 0.4); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2); }
+input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2); }
+input:focus + i, .input-group:focus-within i { color: var(--primary); }
 
 .file-drop-area {
-  border: 2px dashed rgba(255,255,255,0.3);
+  border: 2px dashed rgba(14, 165, 233, 0.4);
   border-radius: 12px;
   padding: 30px;
   text-align: center;
   position: relative;
   transition: var(--transition);
-  background: rgba(0,0,0,0.1);
+  background: var(--card-bg);
   width: 100%;
 }
-.file-drop-area:hover { border-color: var(--primary); background: rgba(14, 165, 233, 0.05); }
+.file-drop-area:hover { border-color: var(--primary); background: rgba(14, 165, 233, 0.1); }
 .file-drop-area input[type="file"] {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   opacity: 0; cursor: pointer;
 }
-.file-drop-area p { margin-top: 10px; word-break: break-all; } /* Prevents long filenames from breaking box */
+.file-drop-area p { margin-top: 10px; word-break: break-all; } 
 
 /* Custom Checkboxes */
 .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
 .custom-checkbox {
   display: flex; align-items: center; gap: 10px;
   cursor: pointer; padding: 10px; border-radius: 8px;
-  background: rgba(255,255,255,0.05); transition: var(--transition);
+  background: var(--card-bg); transition: var(--transition);
 }
-.custom-checkbox:hover { background: rgba(255,255,255,0.1); }
+.custom-checkbox:hover { background: var(--sidebar-hover); }
 .custom-checkbox input { cursor: pointer; width: 18px; height: 18px; accent-color: var(--primary); flex-shrink: 0; }
 
 /* ================= BUTTONS ================= */
@@ -255,43 +269,27 @@ button {
 .btn-danger:hover { background: var(--danger); color: white; }
 .btn-success { background: var(--success); color: white; }
 .btn-success:hover { filter: brightness(1.1); transform: translateY(-2px); }
+.btn-outline { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--glass-border); }
+.btn-outline:hover { background: var(--sidebar-hover); }
 .btn-sm { padding: 8px 12px; font-size: 0.9rem; border-radius: 8px; }
 
 /* ================= CARDS & LISTS ================= */
 .request-card {
   padding: 18px;
   margin-bottom: 15px;
-  background: rgba(0,0,0,0.15);
+  background: var(--card-bg);
   border: 1px solid var(--glass-border);
   transition: var(--transition);
   width: 100%;
   overflow: hidden; 
 }
-.request-card:hover { transform: translateY(-2px); background: rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.2); }
+.request-card:hover { transform: translateY(-2px); background: var(--card-hover); border-color: var(--primary); }
 
 .card-header { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: flex-start; 
-  margin-bottom: 12px; 
-  gap: 10px;
+  display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 10px;
 }
-
-.req-name { 
-  display: flex; 
-  align-items: center; 
-  gap: 8px; 
-  min-width: 0; 
-  flex: 1;
-}
-.req-name span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
-  max-width: 100%;
-}
-
+.req-name { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.req-name span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; max-width: 100%; }
 .card-meta { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem; }
 
 .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; }
@@ -305,7 +303,7 @@ button {
 
 /* ================= PROGRESS BARS ================= */
 .progress-header { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 8px; }
-.progress-wrap { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
+.progress-wrap { width: 100%; height: 8px; background: rgba(14, 165, 233, 0.2); border-radius: 10px; overflow: hidden; }
 .progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.4s ease; border-radius: 10px; }
 .progress-bar-striped {
   background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent);
@@ -338,11 +336,11 @@ button {
 /* Global Drag & Drop Overlay */
 .drop-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);
+  background: var(--body-bg); backdrop-filter: blur(8px);
   display: flex; align-items: center; justify-content: center; z-index: 9999;
   border: 4px dashed var(--primary); opacity: 0; pointer-events: none; transition: var(--transition);
 }
-.drop-overlay.active { opacity: 1; pointer-events: all; }
+.drop-overlay.active { opacity: 0.95; pointer-events: all; }
 
 /* ================= MOBILE RESPONSIVENESS ================= */
 .mobile-header { display: none; }
@@ -352,55 +350,25 @@ button {
 }
 
 @media (max-width: 768px) {
-  /* Show Mobile Header */
   .mobile-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
-    margin-bottom: 20px;
-    border-radius: var(--radius);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 20px; margin-bottom: 20px; border-radius: var(--radius);
   }
-  
-  /* Hide Desktop Toggle */
   #sidebarToggle { display: none; }
-
-  /* Slide Sidebar Off-Screen */
   .sidebar {
     transform: translateX(-100%);
     box-shadow: 10px 0 30px rgba(0,0,0,0.5);
-    background: rgba(15, 23, 42, 0.98); 
+    background: var(--body-bg); 
     z-index: 1000;
   }
-
-  /* Slide Sidebar In via JS */
-  .sidebar.mobile-active {
-    transform: translateX(0);
-  }
-
-  /* Expand Main Content to 100% Width */
-  .main {
-    margin-left: 0;
-    width: 100%;
-    max-width: 100vw;
-    padding: 10px; 
-    overflow-x: hidden; /* Hard kill on any horizontal scrolling */
-  }
-  .main.expanded {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  /* Optimize Checkboxes, Login Box, and paddings */
+  .sidebar.mobile-active { transform: translateX(0); }
+  .main { margin-left: 0; width: 100%; max-width: 100vw; padding: 10px; overflow-x: hidden; }
+  .main.expanded { margin-left: 0; width: 100%; }
   .checkbox-group { grid-template-columns: 1fr; }
   #loginBox { width: 90%; padding: 30px 20px; }
-  
-  /* Shrink the heavy paddings so boxes fit better on small screens */
   .box { padding: 15px; }
   .file-drop-area { padding: 20px 10px; }
   .request-card { padding: 12px; }
-  
-  /* Make sure toasts don't break the screen width */
   .toast-container { right: 10px; left: 10px; top: 10px; }
   .toast { min-width: unset; width: 100%; }
 }

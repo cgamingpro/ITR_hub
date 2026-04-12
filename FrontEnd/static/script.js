@@ -34,6 +34,46 @@ const assistantPercent = document.getElementById("assistantPercent");
 const assistantProgress = document.getElementById("assistantProgressBlock");
 const assistantRequestList = document.getElementById("assistantRequestList");
 
+// ================= THEME MANAGER =================
+const themeToggle = document.getElementById("themeToggle");
+const currentTheme = localStorage.getItem("theme");
+
+// Apply saved theme on load
+if (currentTheme === "light") {
+  document.documentElement.classList.add("light-mode");
+  if(themeToggle) themeToggle.innerHTML = `<i class="fa-solid fa-sun text-warning"></i> <span class="nav-text">Light Mode</span>`;
+}
+
+// Toggle theme on click
+themeToggle?.addEventListener("click", () => {
+  document.documentElement.classList.toggle("light-mode");
+  
+  if (document.documentElement.classList.contains("light-mode")) {
+    localStorage.setItem("theme", "light");
+    themeToggle.innerHTML = `<i class="fa-solid fa-sun text-warning"></i> <span class="nav-text">Light Mode</span>`;
+  } else {
+    localStorage.setItem("theme", "dark");
+    themeToggle.innerHTML = `<i class="fa-solid fa-moon"></i> <span class="nav-text">Dark Mode</span>`;
+  }
+});
+
+// ================= LIVE SEARCH =================
+const searchInput = document.getElementById("searchInput");
+searchInput?.addEventListener("input", (e) => {
+  const term = e.target.value.toLowerCase();
+  const cards = requestList.querySelectorAll(".request-card");
+  
+  cards.forEach(card => {
+    const name = card.querySelector(".req-name").innerText.toLowerCase();
+    const id = card.querySelector(".req-id").innerText.toLowerCase();
+    if (name.includes(term) || id.includes(term)) {
+      card.style.display = "block";
+    } else {
+      card.style.display = "none";
+    }
+  });
+});
+
 setLoggedInUI(false);
 
 // ================= TOAST NOTIFICATIONS =================
@@ -264,7 +304,6 @@ async function loadRecentRequests() {
 
   recentRequestList.innerHTML = ""; 
   
-  // slice(-3) grabs the 3 NEWEST jobs from the array and prepends them
   data.slice(-3).forEach(req => {
     createRequestCard(req, recentRequestList);
     startPolling(req.id);
@@ -283,6 +322,11 @@ async function loadAllRequests() {
     createRequestCard(req, requestList);
     startPolling(req.id);
   });
+  
+  // Apply current search filter to new data if a search is active
+  if(searchInput && searchInput.value) {
+    searchInput.dispatchEvent(new Event('input'));
+  }
 }
 
 // ================= UPLOADERS =================
@@ -337,7 +381,6 @@ function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentT
         progressBlock.classList.add("hidden");
         form.reset();
         
-        // Reset the text under the drop area back to default
         const textElement = fileInputEl.nextElementSibling;
         if (textElement && textElement.tagName === "P") {
             textElement.innerHTML = isAssistant ? "Upload document for analysis" : "Choose a file or drag it here";

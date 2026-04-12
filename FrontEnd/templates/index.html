@@ -60,8 +60,12 @@
     </ul>
 
     <div class="sidebar-footer">
+      <button id="themeToggle" class="btn-outline w-100 mb-10">
+        <i class="fa-solid fa-moon"></i> <span class="nav-text">Dark Mode</span>
+      </button>
+
       <div class="user-profile" data-tooltip="Profile">
-        <i class="fa-solid fa-circle-user fa-2x user-avatar"></i>
+        <i class="fa-solid fa-circle-user fa-2x user-avatar text-primary"></i>
         <span id="userInfo" class="nav-text user-name">Loading...</span>
       </div>
       <button id="logoutBtn" class="btn-danger w-100 mt-10">
@@ -82,7 +86,7 @@
       <div class="welcome-banner glass">
         <div>
           <h2 id="dashboardName">Hey, Welcome back! 👋</h2>
-          <p id="dashboardEmail" style="opacity: 0.8;">Loading user details...</p>
+          <p id="dashboardEmail" class="text-muted">Loading user details...</p>
         </div>
       </div>
 
@@ -135,9 +139,15 @@
     </section>
 
     <section id="requestSection" class="page-section animated fade-in">
-      <div class="page-header">
-        <h2><i class="fa-solid fa-server text-primary"></i> All Requests (Last 2 Days)</h2>
+      
+      <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <h2><i class="fa-solid fa-server text-primary"></i> All Requests</h2>
+        <div class="input-group" style="margin: 0; width: auto; min-width: 250px; flex-grow: 1; max-width: 400px;">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="searchInput" placeholder="Search by name or ID..." style="margin: 0;" />
+        </div>
       </div>
+
       <div id="requestList" class="glass box list-box full-height"></div>
     </section>
 
