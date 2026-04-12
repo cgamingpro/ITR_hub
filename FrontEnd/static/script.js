@@ -1,5 +1,5 @@
 let polling = {};
-let knownStatuses = {}; 
+let knownStatuses = {}; // Tracks statuses to prevent toast spam
 let accessToken = localStorage.getItem("access_token");
 
 const loginBox = document.getElementById("loginBox");
@@ -11,7 +11,7 @@ const loginPassword = document.getElementById("loginPassword");
 
 const logoutBtn = document.getElementById("logoutBtn");
 const sidebarToggle = document.getElementById("sidebarToggle");
-const mobileToggleBtn = document.getElementById("mobileToggleBtn"); // NEW
+const mobileToggleBtn = document.getElementById("mobileToggleBtn");
 const sidebar = document.getElementById("sidebar");
 const mainContent = document.getElementById("mainContent");
 
@@ -264,6 +264,7 @@ async function loadRecentRequests() {
 
   recentRequestList.innerHTML = ""; 
   
+  // slice(-3) grabs the 3 NEWEST jobs from the array and prepends them
   data.slice(-3).forEach(req => {
     createRequestCard(req, recentRequestList);
     startPolling(req.id);
@@ -335,6 +336,12 @@ function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentT
     setTimeout(() => {
         progressBlock.classList.add("hidden");
         form.reset();
+        
+        // Reset the text under the drop area back to default
+        const textElement = fileInputEl.nextElementSibling;
+        if (textElement && textElement.tagName === "P") {
+            textElement.innerHTML = isAssistant ? "Upload document for analysis" : "Choose a file or drag it here";
+        }
     }, 1500);
   };
 
