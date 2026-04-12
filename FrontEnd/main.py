@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
 from openpyxl import Workbook, load_workbook
+from fastapi.staticfiles import StaticFiles
 
 # Your internal imports
 import data
@@ -133,6 +134,7 @@ async def lifespan(app: FastAPI):
 
 # Initialize FastAPI with the lifespan
 app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 

@@ -2,7 +2,7 @@
 .venv/
 .venvL/
 app/
-FrontEnd//local_config.py
+FrontEnd/local_config
 # Python cache
 __pycache__/
 *.pyc
