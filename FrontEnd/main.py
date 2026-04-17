@@ -1,6 +1,7 @@
 import os
 import shutil
 import traceback
+from typing import Optional
 import requests
 import threading
 from datetime import datetime
@@ -153,12 +154,31 @@ async def handele_upload(
     option1: bool = Form(False),
     option2: bool = Form(False),
     option3: bool = Form(False),
-    option4: bool = Form(False)
+    option4: bool = Form(False),
+    
+    special_job: bool = Form(False), 
+    special_date: Optional[str] = Form(None),
+    special_time: Optional[str] = Form(None),
+    retry_number: int = Form(0)
+    
 ):
     print(f"\n=== UPLOAD ENDPOINT CALLED ===")
     con = getdb()
     cursor = con.cursor()
     
+    #speical job validation 
+    if special_job:
+        missing_fields = []
+        if not special_date:
+            missing_fields.append("special_date")
+        if not special_time:
+            missing_fields.append("special_time")
+        if retry_number < 0:
+            raise HTTPException(status_code=400, detail="retry_number must be a non-negative integer.")
+        
+        if missing_fields:
+            raise HTTPException(status_code=400, detail=f"Missing required fields for special job: {', '.join(missing_fields)}")
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_name = os.path.basename(user_file.filename) 
     unique_filename = f"{current_user_id}_{timestamp}_{safe_name}"
@@ -180,7 +200,7 @@ async def handele_upload(
         con.commit()
         
         request_type = await get_combination_id(option1, option2, option3)
-        rqest_id = await createRequest(current_user_id, new_upload_id, file_location, request_type)
+        rqest_id = await createRequest(current_user_id, new_upload_id, file_location, request_type , special_job, special_date, special_time, retry_number)
         
         return {
                 "message": "Upload started",
@@ -195,7 +215,7 @@ async def handele_upload(
         cursor.close()
         con.close()
 
-async def createRequest(current_user_id: str, upload_id: str, current_path: str, request_type: str):
+async def createRequest(current_user_id: str, upload_id: str, current_path: str, request_type: str , special_job: bool, special_date: Optional[str], special_time: Optional[str], retry_number: int = 0):
     con = getdb()
     cursor = con.cursor()
     try: 
@@ -203,16 +223,16 @@ async def createRequest(current_user_id: str, upload_id: str, current_path: str,
         ws = wb.active
         total_rows = sum(1 for _ in ws.iter_rows(min_row=2, values_only=True))
         
-        insert_query = """INSERT INTO requests (user_id, upload_id, name, total_jobs)
-                        VALUES (%s::uuid, %s::uuid, %s, %s)
+        insert_query = """INSERT INTO requests (user_id, upload_id, name, total_jobs , isschedule)
+                        VALUES (%s::uuid, %s::uuid, %s, %s, %s)
                         RETURNING id;"""
         
-        cursor.execute(insert_query, (current_user_id, upload_id, os.path.basename(current_path), total_rows))
+        cursor.execute(insert_query, (current_user_id, upload_id, os.path.basename(current_path), total_rows, special_job))
         new_rquest_id = cursor.fetchone()['id']
         con.commit()
         
         redis_conn.set(f"batch:{new_rquest_id}:remaining", total_rows)
-        await createJobs(current_user_id, new_rquest_id, current_path, request_type)
+        await createJobs(current_user_id, new_rquest_id, current_path, request_type , special_job, special_date, special_time, retry_number)
         
         return new_rquest_id
         
@@ -224,7 +244,7 @@ async def createRequest(current_user_id: str, upload_id: str, current_path: str,
         cursor.close()
         con.close()
 
-async def createJobs(current_user_id: str, request_id: str, current_path: str, job_type: str):
+async def createJobs(current_user_id: str, request_id: str, current_path: str, job_type: str ,special_job: bool = False, special_date: Optional[str] = None, special_time: Optional[str] = None, retry_number: int = 0):
     con = getdb()
     cursor = con.cursor()
     try:
@@ -247,7 +267,11 @@ async def createJobs(current_user_id: str, request_id: str, current_path: str, j
                 "pan_id": pan_id,
                 "pass_id": pass_id,
                 "job_code": job_type,
-                "request_id": request_id
+                "request_id": request_id,
+                "schedule_date": special_date,
+                "schedule_time": special_time,
+                "retry_number": retry_number,
+                "special_job": special_job
             }
             
             requests.post(api2url, json=paylod)

@@ -8,6 +8,10 @@ class Job(BaseModel):
     pass_id: str
     job_code: int
     request_id: str
+    schedule_date: Optional[str] = None
+    schedule_time: Optional[str] = None
+    rettry_number: Optional[int] = 0
+    special_job: Optional[bool] = False
     
     
     
