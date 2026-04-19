@@ -34,12 +34,10 @@ const specialJobPanel = document.getElementById("specialJobPanel");
 const specialDate = document.getElementById("specialDate");
 const specialTime = document.getElementById("specialTime");
 
-// assistant
-const assistantForm = document.getElementById("assistantUploadForm");
-const assistantFileInput = document.getElementById("assistantFileInput");
-const assistantBar = document.getElementById("assistantBar");
-const assistantPercent = document.getElementById("assistantPercent");
-const assistantProgress = document.getElementById("assistantProgressBlock");
+// AI Assistant
+const aiQueryForm = document.getElementById("aiQueryForm");
+const aiQueryInput = document.getElementById("aiQueryInput");
+const aiQueryBtn = document.getElementById("aiQueryBtn");
 const assistantRequestList = document.getElementById("assistantRequestList");
 
 // Profile Modal Elements
@@ -220,7 +218,7 @@ function logout() {
   if (scheduledList) scheduledList.innerHTML = "";
   if (recentRequestList) recentRequestList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-inbox fa-2x"></i><p>No active jobs</p></div>`;
   if (recentScheduledList) recentScheduledList.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;"><i class="fa-solid fa-calendar fa-2x"></i><p>No scheduled jobs</p></div>`;
-  if (assistantRequestList) assistantRequestList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-file-circle-question fa-2x"></i><p>Waiting for input...</p></div>`;
+  if (assistantRequestList) assistantRequestList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-message fa-2x"></i><p>Waiting for your prompt...</p></div>`;
 
   setLoggedInUI(false);
   showToast("Logged out successfully", "info");
@@ -516,7 +514,7 @@ async function loadScheduledRequests() {
 }
 
 // ================= FILE SELECTION HANDLER =================
-function handleFileSelection(inputEl, isAssistant = false) {
+function handleFileSelection(inputEl) {
   const textElement = inputEl.nextElementSibling;
   
   if (inputEl.files && inputEl.files.length > 0) {
@@ -535,25 +533,22 @@ function handleFileSelection(inputEl, isAssistant = false) {
         e.preventDefault();
         e.stopPropagation();
         inputEl.value = ""; 
-        textElement.innerHTML = isAssistant ? "Upload document for analysis" : "Choose a file or drag it here";
+        textElement.innerHTML = "Choose a file or drag it here";
       });
     }
   } else {
     if (textElement && textElement.tagName === "P") {
-      textElement.innerHTML = isAssistant ? "Upload document for analysis" : "Choose a file or drag it here";
+      textElement.innerHTML = "Choose a file or drag it here";
     }
   }
 }
 
 if (fileInput) {
-  fileInput.addEventListener("change", () => handleFileSelection(fileInput, false));
-}
-if (assistantFileInput) {
-  assistantFileInput.addEventListener("change", () => handleFileSelection(assistantFileInput, true));
+  fileInput.addEventListener("change", () => handleFileSelection(fileInput));
 }
 
 // ================= UPLOADERS =================
-function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentText, targetListContainer, isAssistant = false) {
+function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentText, targetListContainer) {
   e.preventDefault();
   if (!accessToken) return;
 
@@ -595,11 +590,6 @@ function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentT
     await loadScheduledRequests(); 
     await loadStats(); 
     
-    if (isAssistant) {
-      targetListContainer.innerHTML = "";
-      createRequestCard({ id: res.request_id, name: fileInputEl.files[0].name, status: "queued", total_jobs: 0 }, targetListContainer);
-    }
-    
     startPolling(res.request_id);
 
     setTimeout(() => {
@@ -614,7 +604,7 @@ function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentT
         
         const textElement = fileInputEl.nextElementSibling;
         if (textElement && textElement.tagName === "P") {
-            textElement.innerHTML = isAssistant ? "Upload document for analysis" : "Choose a file or drag it here";
+            textElement.innerHTML = "Choose a file or drag it here";
         }
     }, 1500);
   };
@@ -622,8 +612,93 @@ function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentT
   xhr.send(formData);
 }
 
-if(uploadForm) uploadForm.addEventListener("submit", (e) => handleUpload(e, uploadForm, "fileInput", uploadProgressBlock, uploadProgressBar, uploadPercent, recentRequestList, false));
-if(assistantForm) assistantForm.addEventListener("submit", (e) => handleUpload(e, assistantForm, "assistantFileInput", assistantProgress, assistantBar, assistantPercent, assistantRequestList, true));
+if(uploadForm) uploadForm.addEventListener("submit", (e) => handleUpload(e, uploadForm, "fileInput", uploadProgressBlock, uploadProgressBar, uploadPercent, recentRequestList));
+
+// ================= AI ASSISTANT QUERY =================
+if (aiQueryForm) {
+  aiQueryForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const query = aiQueryInput.value.trim();
+    if (!query) return;
+
+    const originalBtnText = aiQueryBtn.innerHTML;
+    aiQueryBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Processing Query...`;
+    aiQueryBtn.disabled = true;
+
+    try {
+      const res = await apiFetch("/ai/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query })
+      });
+
+      const data = await res.json();
+      renderAiResult(query, data);
+      aiQueryInput.value = ""; 
+    } catch (err) {
+      showToast("AI Query failed", "error");
+      renderAiResult(query, { type: "error", message: err.message });
+    } finally {
+      aiQueryBtn.innerHTML = originalBtnText;
+      aiQueryBtn.disabled = false;
+    }
+  });
+}
+
+function renderAiResult(query, data) {
+  const container = document.getElementById("assistantRequestList");
+  const empty = container.querySelector(".empty-state");
+  if (empty) empty.remove();
+
+  const resultCard = document.createElement("div");
+  resultCard.className = "request-card glass animated slide-up mb-10";
+
+  let contentHtml = "";
+
+  if (data.type === "query_result") {
+    
+    // Feature: Display the raw executed SQL
+    if (data.executed_sql) {
+      contentHtml += `<div style="font-family: monospace; font-size: 0.8em; color: var(--text-muted); margin-bottom: 10px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap;">${data.executed_sql}</div>`;
+    }
+
+    if (data.data && data.data.length > 0) {
+       let headers = Object.keys(data.data[0]);
+       let tableHtml = `<div class="ai-table-container"><table class="ai-table">`;
+       tableHtml += `<thead><tr>`;
+       headers.forEach(h => tableHtml += `<th>${h}</th>`);
+       tableHtml += `</tr></thead><tbody>`;
+       data.data.forEach(row => {
+         tableHtml += `<tr>`;
+         headers.forEach(h => tableHtml += `<td>${row[h] !== null ? row[h] : ''}</td>`);
+         tableHtml += `</tr>`;
+       });
+       tableHtml += `</tbody></table></div>`;
+       contentHtml += tableHtml;
+    } else {
+       contentHtml += `<p class="text-muted" style="margin-top: 10px;">Query returned no results.</p>`;
+    }
+  } else if (data.type === "action_result") {
+    contentHtml = `<div style="margin-top: 10px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--success); padding: 12px; border-radius: 8px; color: var(--text-main);">
+      <i class="fa-solid fa-check text-success" style="margin-right: 8px;"></i> ${data.message}
+    </div>`;
+  } else {
+    contentHtml = `<div class="text-danger" style="margin-top: 10px;">${data.message || data.detail || 'Unknown response from AI'}</div>`;
+  }
+
+  resultCard.innerHTML = `
+    <div style="font-weight: 600; margin-bottom: 12px; color: var(--text-main); border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
+      <i class="fa-solid fa-user text-muted" style="margin-right: 8px;"></i> ${query}
+    </div>
+    <div>
+      <i class="fa-solid fa-robot text-primary" style="margin-right: 8px;"></i>
+      ${contentHtml}
+    </div>
+  `;
+
+  container.prepend(resultCard);
+}
+
 
 // ================= LOGIN =================
 if(loginForm) {
@@ -736,11 +811,11 @@ window.addEventListener("drop", (e) => {
   if (!files || files.length === 0) return;
 
   const dashboardActive = document.getElementById("dashboardSection").classList.contains("active");
-  const targetInput = dashboardActive ? document.getElementById("fileInput") : document.getElementById("assistantFileInput");
+  const targetInput = dashboardActive ? document.getElementById("fileInput") : null;
   
   if (targetInput) {
     targetInput.files = files; 
-    handleFileSelection(targetInput, !dashboardActive);
+    handleFileSelection(targetInput);
     showToast(`Attached: ${files[0].name}`, "info");
   }
 });

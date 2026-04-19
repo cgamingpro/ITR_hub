@@ -244,36 +244,24 @@
       <div class="dashboard-grid">
         <div class="glass box upload-box">
           <div class="box-header">
-            <h3>Feed Assistant</h3>
+            <h3><i class="fa-solid fa-terminal text-primary"></i> AI Command Center</h3>
           </div>
-          <form id="assistantUploadForm">
-            <div class="file-drop-area">
-              <i class="fa-solid fa-brain fa-3x text-primary" style="margin-bottom: 15px;"></i>
-              <input type="file" id="assistantFileInput" required />
-              <p>Upload document for analysis</p>
+          <form id="aiQueryForm">
+            <div style="margin-bottom: 15px;">
+              <textarea id="aiQueryInput" class="w-100" rows="6" placeholder="Ask the AI to query database, check status, or retry failed jobs..." required></textarea>
             </div>
-            <button type="submit" class="btn-primary w-100 mt-10">
-              <i class="fa-solid fa-wand-magic-sparkles"></i> Process with AI
+            <button type="submit" class="btn-primary w-100 mt-10" id="aiQueryBtn">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Process Query
             </button>
           </form>
-
-          <div id="assistantProgressBlock" class="hidden progress-container mt-10">
-            <div class="progress-header">
-              <span>Uploading...</span>
-              <span id="assistantPercent">0%</span>
-            </div>
-            <div class="progress-wrap">
-              <div id="assistantBar" class="progress-bar progress-bar-striped"></div>
-            </div>
-          </div>
         </div>
 
-        <div class="glass box list-box">
+        <div class="glass box list-box" style="display: flex; flex-direction: column;">
           <div class="box-header">
-            <h3><i class="fa-solid fa-bolt text-primary"></i> Latest Output</h3>
+            <h3><i class="fa-solid fa-bolt text-primary"></i> Output & Logs</h3>
           </div>
-          <div id="assistantRequestList">
-             <div class="empty-state"><i class="fa-solid fa-file-circle-question fa-2x"></i><p>Waiting for input...</p></div>
+          <div id="assistantRequestList" style="flex-grow: 1; overflow-y: auto; max-height: 500px; padding-right: 5px;">
+             <div class="empty-state"><i class="fa-solid fa-message fa-2x"></i><p>Waiting for your prompt...</p></div>
           </div>
         </div>
       </div>

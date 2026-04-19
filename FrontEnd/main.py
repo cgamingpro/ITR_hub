@@ -6,6 +6,10 @@ import requests
 import threading
 from datetime import datetime
 from contextlib import asynccontextmanager
+import json
+import google.generativeai as genai
+import sqlparse
+import re
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
@@ -27,8 +31,13 @@ api2url = data.API2URL
 
 # Replace with FireBase cloud Storage 
 UPLOAD_DIRECTORY = os.getenv("STORAGE_PATH", "local_storage")
-os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 
+os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
+ALLOWED_TABLES = {"requests", "jobs", "job_results"}
+
+genai.configure(api_key="AIzaSyDkMio9lAYy_RgmrxWPa_MIBw91UEdiYi8")
+
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 # ==========================================
 # 1. THE REDIS BACKGROUND LISTENER
@@ -600,3 +609,224 @@ async def get_combination_id(opt1, opt2, opt3):
     if opt2: total += 2
     if opt3: total += 4
     return total
+
+
+
+
+##ai Implemteiodn 
+
+def validate_sql_safety(sql: str):
+    parsed = sqlparse.parse(sql)
+
+    if len(parsed) != 1:
+        raise HTTPException(status_code=400, detail="Multiple SQL statements not allowed")
+
+    stmt = parsed[0]
+
+    if stmt.get_type() != "SELECT":
+        raise HTTPException(status_code=400, detail="Only SELECT allowed")
+
+    sql_lower = sql.lower()
+
+    # Basic injection protection
+    forbidden = [";", "--", "/*", "*/", "drop", "delete", "insert", "update", "alter"]
+    if any(f in sql_lower for f in forbidden):
+        raise HTTPException(status_code=400, detail="Unsafe SQL detected")
+
+    # Check allowed tables
+    if not any(tbl in sql_lower for tbl in ALLOWED_TABLES):
+        raise HTTPException(status_code=400, detail="Querying unknown tables not allowed")
+        
+    return sql
+
+##def proumpt
+def build_prompt(user_query: str, user_id: str):
+    return f"""
+You are an AI assistant for a job processing system.
+
+Database schema:
+
+requests(id, user_id, name, total_jobs, status, created_at, isschedule)
+jobs(id, request_id, row_number, job_type, status, created_at)
+job_results(job_id, output, success, error)
+
+STRICT RULES:
+- ONLY generate a single SELECT query
+- NO semicolons
+- NO joins unless necessary
+- ALWAYS use proper table names (requests, jobs, job_results)
+- DO NOT include user_id in query (backend will handle it)
+- Keep query simple
+
+Supported actions:
+- retry_failed_jobs
+
+Return ONLY valid JSON. No explanation, no text, no markdown.
+
+Examples:
+
+Query:
+{{
+  "type": "query",
+  "sql": "SELECT * FROM requests"
+}}
+
+Action:
+{{
+  "type": "action",
+  "action": "retry_failed_jobs",
+  "params": {{"request_id": "uuid"}}
+}}
+
+User query:
+"{user_query}"
+"""
+
+##safe check
+def is_safe_sql(sql: str):
+    sql = sql.lower().strip()
+    return sql.startswith("select")
+
+@app.post("/ai/query")
+async def ai_query(request: Request, current_user_id=Depends(auth.get_current_user)):
+    body = await request.json()
+    user_query = body.get("query")
+
+    if not user_query:
+        raise HTTPException(status_code=400, detail="Query is required")
+
+    prompt = build_prompt(user_query, current_user_id)
+
+    try:
+        response = model.generate_content(
+            prompt,
+            generation_config={
+                "temperature": 0
+            }
+        )
+
+        content = response.text
+
+        # Parse JSON safely
+        
+
+        try:
+            json_match = re.search(r"\{.*\}", content, re.DOTALL)
+            if not json_match:
+                raise ValueError("No JSON found")
+
+            ai_output = json.loads(json_match.group())
+        except:
+            raise HTTPException(status_code=500, detail=f"AI returned invalid JSON: {content}")
+
+        # QUERY MODE
+        # ========================
+        if ai_output["type"] == "query":
+            raw_sql = ai_output.get("sql")
+
+            if not raw_sql:
+                raise HTTPException(status_code=400, detail="No SQL provided")
+
+            # 1. Validate the syntax and safety
+            validate_sql_safety(raw_sql)
+
+            # 2. Build the CTE Sandbox
+            # We redefine the tables as temporary, filtered views for this execution only.
+            secure_query = f"""
+            WITH requests AS (
+                SELECT * FROM public.requests WHERE user_id = %s::uuid
+            ),
+            jobs AS (
+                SELECT j.* FROM public.jobs j
+                JOIN public.requests r ON j.request_id = r.id
+                WHERE r.user_id = %s::uuid
+            ),
+            job_results AS (
+                SELECT jr.* FROM public.job_results jr
+                JOIN public.jobs j ON jr.job_id = j.id
+                JOIN public.requests r ON j.request_id = r.id
+                WHERE r.user_id = %s::uuid
+            )
+            {raw_sql} 
+            """
+
+            con = getdb()
+            cursor = con.cursor()
+
+            try:
+                # 3. Execute securely. We pass the user_id 3 times for the 3 CTE filters.
+                cursor.execute(secure_query, (current_user_id, current_user_id, current_user_id))
+                
+                rows = cursor.fetchall()
+                # If your cursor doesn't return dicts natively, you might need:
+                # columns = [col[0] for col in cursor.description]
+                # result = [dict(zip(columns, row)) for row in rows]
+                result = [dict(row) for row in rows] 
+
+                return {
+                    "type": "query_result",
+                    "data": result,
+                    "executed_sql": raw_sql  # Keep this clean for the frontend
+                }
+
+            except Exception as db_e:
+                # This will catch any remaining database-level syntax errors
+                print(f"Database Execution Error: {db_e}")
+                raise HTTPException(status_code=400, detail="AI generated an invalid SQL query.")
+            finally:
+                cursor.close()
+                con.close()
+
+        # ========================
+        # ACTION MODE
+        # ========================
+        elif ai_output["type"] == "action":
+            action = ai_output.get("action")
+            params = ai_output.get("params", {})
+
+            # Example: retry failed jobs
+            if action == "retry_failed_jobs":
+                request_id = params.get("request_id")
+
+                if not request_id:
+                    raise HTTPException(status_code=400, detail="request_id required")
+
+                con = getdb()
+                cursor = con.cursor()
+
+                try:
+                    cursor.execute("""
+                        SELECT j.id
+                        FROM jobs j
+                        LEFT JOIN job_results jr ON j.id = jr.job_id
+                        WHERE j.request_id = %s::uuid
+                        AND (jr.success = false OR jr.success IS NULL)
+                    """, (request_id,))
+
+                    jobs = cursor.fetchall()
+
+                    for job in jobs:
+                        requests.post(api2url, json={
+                            "job_id": job["id"],
+                            "request_id": request_id,
+                            "retry": True,
+                            "special_job": False
+                        })
+
+                    return {
+                        "type": "action_result",
+                        "message": f"Retried {len(jobs)} jobs"
+                    }
+
+                finally:
+                    cursor.close()
+                    con.close()
+
+            return {"type": "action_result", "message": "Unknown action"}
+
+        else:
+            raise HTTPException(status_code=400, detail="Invalid AI response")
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="AI processing failed")
