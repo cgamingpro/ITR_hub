@@ -1,525 +1,286 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Upload</title>
-<style>
-body{
-    font-family: Arial;
-    margin:20px;
-    max-width: 900px;
-}
-
-.box{
-    border:1px solid #ccc;
-    padding:15px;
-    margin-bottom:20px;
-    border-radius:10px;
-}
-
-.request-card{
-    border:1px solid #ccc;
-    padding:10px;
-    margin-bottom:10px;
-    border-radius:10px;
-}
-
-.progress-wrap{
-    width:100%;
-    height:10px;
-    background:#eee;
-    border-radius:999px;
-    overflow:hidden;
-    margin-top:6px;
-}
-
-.progress-bar{
-    height:100%;
-    width:0%;
-    background:#4f46e5;
-}
-
-button{
-    cursor:pointer;
-    padding:8px 14px;
-    border:none;
-    border-radius:8px;
-    background:#4f46e5;
-    color:white;
-}
-
-button.secondary{
-    background:#6b7280;
-}
-
-button.danger{
-    background:#dc2626;
-}
-
-input[type="email"],
-input[type="password"],
-input[type="file"],
-input[type="date"],
-input[type="time"],
-input[type="number"]{
-    margin-top:6px;
-    margin-bottom:10px;
-}
-
-.hidden{
-    display:none !important;
-}
-
-.small{
-    font-size: 0.9rem;
-    color: #555;
-}
-
-/* Style for the special job fields container */
-#specialJobFields {
-    margin-top: 10px;
-    margin-left: 20px;
-    padding: 10px 15px;
-    border-left: 3px solid #4f46e5;
-    background: #f9fafb;
-    border-radius: 0 8px 8px 0;
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITR Hub | Dashboard</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="/static/script.js" defer></script>
 </head>
 <body>
 
-<h2>JWT Login + Upload</h2>
+<div id="toastContainer" class="toast-container"></div>
 
-<div class="box" id="loginBox">
-    <h3>Login</h3>
+<div class="glass box" id="loginBox">
+  <div class="login-header">
+    <i class="fa-solid fa-shield-halved fa-3x" style="color: #38bdf8; margin-bottom: 15px;"></i>
+    <h2>Welcome Back</h2>
+    <p>Sign in to continue to ITR Hub</p>
+  </div>
+  
+  <form id="loginForm">
+    <div class="input-group">
+      <i class="fa-solid fa-envelope"></i>
+      <input type="email" id="loginEmail" placeholder="Email Address" required />
+    </div>
 
-    <form id="loginForm">
-        <div>
-            <label>Email</label><br>
-            <input type="email" id="loginEmail" required>
-        </div>
+    <div class="input-group">
+      <i class="fa-solid fa-lock"></i>
+      <input type="password" id="loginPassword" placeholder="Password" required />
+    </div>
 
-        <div>
-            <label>Password</label><br>
-            <input type="password" id="loginPassword" required>
-        </div>
-
-        <button type="submit">Login</button>
-    </form>
-
-    <div id="loginMessage" style="margin-top:10px;"></div>
+    <button type="submit" class="btn-primary w-100">
+      <i class="fa-solid fa-arrow-right-to-bracket"></i> Secure Login
+    </button>
+  </form>
 </div>
 
-<div id="appBox" class="hidden">
+<div id="appBox" class="hidden app-wrapper">
 
-    <div class="box">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-            <div>
-                <b id="userInfo">Logged in</b>
-                <div class="small">Token is stored in localStorage for now.</div>
-            </div>
-            <button class="secondary" id="logoutBtn" type="button">Logout</button>
-        </div>
+  <nav class="glass sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h3 class="brand-text">ITR HUB</h3>
+      <button id="sidebarToggle" class="icon-btn"><i class="fa-solid fa-bars"></i></button>
     </div>
 
-    <h2>Upload File</h2>
+    <ul class="nav-links">
+      <li onclick="showSection('dashboardSection')" class="active" data-tooltip="Dashboard">
+        <i class="fa-solid fa-chart-pie"></i> <span class="nav-text">Dashboard</span>
+      </li>
+      <li onclick="showSection('assistantSection')" data-tooltip="Assistant">
+        <i class="fa-solid fa-robot"></i> <span class="nav-text">Assistant</span>
+      </li>
+      <li onclick="showSection('requestSection')" data-tooltip="Requests">
+        <i class="fa-solid fa-server"></i> <span class="nav-text">Requests</span>
+      </li>
+    </ul>
 
-    <div class="box">
-        <form id="uploadForm">
-            <div>
-                <input type="file" name="user_file" id="fileInput" required>
+    <div class="sidebar-footer">
+      <button id="themeToggle" class="btn-outline w-100 mb-10">
+        <i class="fa-solid fa-moon"></i> <span class="nav-text">Dark Mode</span>
+      </button>
+
+      <div class="user-profile" data-tooltip="Profile">
+        <i class="fa-solid fa-circle-user fa-2x user-avatar text-primary"></i>
+        <span id="userInfo" class="nav-text user-name">Loading...</span>
+      </div>
+      <button id="logoutBtn" class="btn-danger w-100 mt-10">
+        <i class="fa-solid fa-power-off"></i> <span class="nav-text">Logout</span>
+      </button>
+    </div>
+  </nav>
+
+  <main class="main" id="mainContent">
+
+    <div class="mobile-header glass">
+      <h3 class="brand-text">ITR HUB</h3>
+      <button id="mobileToggleBtn" class="icon-btn"><i class="fa-solid fa-bars"></i></button>
+    </div>
+
+    <section id="dashboardSection" class="page-section active animated fade-in">
+      
+      <div class="welcome-banner glass">
+        <div>
+          <h2 id="dashboardName">Hey, Welcome back! 👋</h2>
+          <p id="dashboardEmail" class="text-muted">Loading user details...</p>
+        </div>
+      </div>
+
+      <div class="stats-grid mb-10" id="statsContainer">
+        <div class="stat-card glass">
+          <i class="fa-solid fa-server text-primary"></i>
+          <div>
+            <h4>Total Jobs</h4>
+            <h3 id="statTotal">0</h3>
+          </div>
+        </div>
+        <div class="stat-card glass">
+          <i class="fa-solid fa-circle-check text-success"></i>
+          <div>
+            <h4>Completed</h4>
+            <h3 id="statCompleted">0</h3>
+          </div>
+        </div>
+        <div class="stat-card glass">
+          <i class="fa-solid fa-clock text-warning"></i>
+          <div>
+            <h4>Pending</h4>
+            <h3 id="statPending">0</h3>
+          </div>
+        </div>
+        <div class="stat-card glass">
+          <i class="fa-solid fa-circle-xmark text-danger"></i>
+          <div>
+            <h4>Failed</h4>
+            <h3 id="statFailed">0</h3>
+          </div>
+        </div>
+        <div class="stat-card glass">
+          <i class="fa-solid fa-calendar-check text-primary"></i>
+          <div>
+            <h4>Scheduled</h4>
+            <h3 id="statScheduled">0</h3>
+          </div>
+        </div>
+        <div class="stat-card glass">
+          <i class="fa-solid fa-layer-group text-primary"></i>
+          <div>
+            <h4>Processed</h4>
+            <h3 id="statProcessed">0</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="glass box upload-box">
+          <div class="box-header">
+            <h3><i class="fa-solid fa-cloud-arrow-up text-primary"></i> Process New File</h3>
+          </div>
+
+          <form id="uploadForm">
+            <div class="file-drop-area">
+              <i class="fa-solid fa-file-excel fa-3x text-primary" style="margin-bottom: 15px;"></i>
+              <input type="file" id="fileInput" name="user_file" required />
+              <p>Choose a file or drag it here</p>
             </div>
 
-            <div>
-                <label><input type="checkbox" name="option1"> status check</label><br>
-                <label><input type="checkbox" name="option2"> Option 2</label><br>
-                <label><input type="checkbox" name="option3"> Option 3</label><br>
-                <label><input type="checkbox" name="option4"> Option 4</label><br>
-                
-                <label><input type="checkbox" name="special_job" id="specialJobCheck"> special job</label>
+            <div class="checkbox-group mt-10">
+              <label class="custom-checkbox"><input type="checkbox" name="option1" value="true" /> <span>Status Check</span></label>
+              <label class="custom-checkbox"><input type="checkbox" name="option2" value="true" /> <span>E-Verify</span></label>
+              <label class="custom-checkbox"><input type="checkbox" name="option3" value="true" /> <span>Pending Actions</span></label>
+              <label class="custom-checkbox"><input type="checkbox" name="option4" value="true" /> <span>Grievance</span></label>
             </div>
 
-            <div id="specialJobFields" class="hidden">
-                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <div>
-                        <label class="small">Date</label><br>
-                        <input type="date" name="special_date" id="specialDateInput">
-                    </div>
-                    <div>
-                        <label class="small">Time</label><br>
-                        <input type="time" name="special_time" id="specialTimeInput">
-                    </div>
-                    <div>
-                        <label class="small">Retry Number</label><br>
-                        <input type="number" name="retry_number" id="retryNumberInput" min="0" value="0">
-                    </div>
-                </div>
+            <div class="mt-10">
+              <label class="custom-checkbox w-100" style="background: rgba(14, 165, 233, 0.1); border: 1px solid var(--primary);">
+                <input type="checkbox" name="special_job" id="specialJobToggle" value="true" /> 
+                <span><i class="fa-solid fa-star text-primary"></i> Enable Special Job Scheduling</span>
+              </label>
             </div>
 
-            <br>
-            <button type="submit">Upload</button>
-        </form>
+            <div id="specialJobPanel" class="hidden mt-10" style="padding: 15px; border: 1px dashed var(--primary); border-radius: 12px; background: var(--card-bg);">
+              <div class="input-group">
+                <i class="fa-solid fa-calendar"></i>
+                <input type="date" name="special_date" id="specialDate" />
+              </div>
+              <div class="input-group">
+                <i class="fa-solid fa-clock"></i>
+                <input type="time" name="special_time" id="specialTime" />
+              </div>
+              <div class="input-group" style="margin-bottom: 0;">
+                <i class="fa-solid fa-rotate-right"></i>
+                <input type="number" name="retry_number" id="retryNumber" placeholder="Retry Count (e.g. 0)" min="0" value="0" />
+              </div>
+            </div>
 
-        <br>
+            <button type="submit" class="btn-primary w-100 mt-10">
+              <i class="fa-solid fa-rocket"></i> Start Processing
+            </button>
+          </form>
 
-        <div id="statusMessage"></div>
-
-        <div id="uploadProgressBlock" class="hidden">
-            Uploading: <span id="uploadPercent">0%</span>
+          <div id="uploadProgressBlock" class="hidden progress-container mt-10">
+            <div class="progress-header">
+              <span>Uploading...</span>
+              <span id="uploadPercent">0%</span>
+            </div>
             <div class="progress-wrap">
-                <div class="progress-bar" id="uploadProgressBar"></div>
+              <div id="uploadProgressBar" class="progress-bar progress-bar-striped"></div>
             </div>
+          </div>
         </div>
-    </div>
 
-    <h3>Requests (last 2 days)</h3>
+        <div class="glass box list-box">
+          <div class="box-header">
+            <h3><i class="fa-solid fa-clock text-primary"></i> Active Jobs</h3>
+          </div>
+          <div id="recentRequestList" class="request-list-container">
+            <div class="empty-state"><i class="fa-solid fa-inbox fa-2x"></i><p>No active jobs</p></div>
+          </div>
+        </div>
+      </div>
 
-    <div id="requestList" class="box">
-        <div class="empty-state">No requests yet.</div>
-    </div>
+      <div class="glass box list-box mt-10">
+        <div class="box-header">
+          <h3><i class="fa-solid fa-calendar-check text-primary"></i> Recent Scheduled Jobs</h3>
+        </div>
+        <div id="recentScheduledList" class="request-list-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+          <div class="empty-state" style="grid-column: 1 / -1;"><i class="fa-solid fa-calendar fa-2x"></i><p>No scheduled jobs</p></div>
+        </div>
+      </div>
+
+    </section>
+
+    <section id="requestSection" class="page-section animated fade-in">
+      
+      <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+          <h2 style="margin: 0;"><i class="fa-solid fa-server text-primary"></i> Requests</h2>
+          <div class="custom-tabs">
+            <div class="tab active" onclick="switchRequestTab('all')">All</div>
+            <div class="tab" onclick="switchRequestTab('scheduled')">Scheduled (5 Days)</div>
+          </div>
+        </div>
+        
+        <div class="input-group" style="margin: 0; width: auto; min-width: 250px; flex-grow: 1; max-width: 400px;">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="searchInput" placeholder="Search by name or ID..." style="margin: 0;" />
+        </div>
+      </div>
+
+      <div id="requestList" class="glass box list-box full-height active-tab-content"></div>
+      <div id="scheduledList" class="glass box list-box full-height hidden"></div>
+    </section>
+
+    <section id="assistantSection" class="page-section animated fade-in">
+      <div class="page-header">
+        <h2><i class="fa-solid fa-robot text-primary"></i> AI Assistant Mode</h2>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="glass box upload-box">
+          <div class="box-header">
+            <h3>Feed Assistant</h3>
+          </div>
+          <form id="assistantUploadForm">
+            <div class="file-drop-area">
+              <i class="fa-solid fa-brain fa-3x text-primary" style="margin-bottom: 15px;"></i>
+              <input type="file" id="assistantFileInput" required />
+              <p>Upload document for analysis</p>
+            </div>
+            <button type="submit" class="btn-primary w-100 mt-10">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Process with AI
+            </button>
+          </form>
+
+          <div id="assistantProgressBlock" class="hidden progress-container mt-10">
+            <div class="progress-header">
+              <span>Uploading...</span>
+              <span id="assistantPercent">0%</span>
+            </div>
+            <div class="progress-wrap">
+              <div id="assistantBar" class="progress-bar progress-bar-striped"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass box list-box">
+          <div class="box-header">
+            <h3><i class="fa-solid fa-bolt text-primary"></i> Latest Output</h3>
+          </div>
+          <div id="assistantRequestList">
+             <div class="empty-state"><i class="fa-solid fa-file-circle-question fa-2x"></i><p>Waiting for input...</p></div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
 </div>
-
-<script>
-let polling = {};
-let accessToken = localStorage.getItem("access_token") || null;
-
-const loginBox = document.getElementById("loginBox");
-const appBox = document.getElementById("appBox");
-const loginForm = document.getElementById("loginForm");
-const loginEmail = document.getElementById("loginEmail");
-const loginPassword = document.getElementById("loginPassword");
-const loginMessage = document.getElementById("loginMessage");
-const logoutBtn = document.getElementById("logoutBtn");
-
-const form = document.getElementById("uploadForm");
-const fileInput = document.getElementById("fileInput");
-const statusMessage = document.getElementById("statusMessage");
-const uploadProgressBlock = document.getElementById("uploadProgressBlock");
-const uploadProgressBar = document.getElementById("uploadProgressBar");
-const uploadPercent = document.getElementById("uploadPercent");
-const requestList = document.getElementById("requestList");
-const userInfo = document.getElementById("userInfo");
-
-// New elements for Special Job
-const specialJobCheck = document.getElementById("specialJobCheck");
-const specialJobFields = document.getElementById("specialJobFields");
-const specialDateInput = document.getElementById("specialDateInput");
-
-// Toggle visibility of Special Job fields
-specialJobCheck.addEventListener("change", function() {
-    if (this.checked) {
-        specialJobFields.classList.remove("hidden");
-    } else {
-        specialJobFields.classList.add("hidden");
-    }
-});
-
-// Set default date to today
-const today = new Date().toISOString().split('T')[0];
-specialDateInput.value = today;
-
-function authHeaders() {
-    return accessToken ? {
-        "Authorization": "Bearer " + accessToken
-    } : {};
-}
-
-async function apiFetch(url, options = {}) {
-    const headers = new Headers(options.headers || {});
-    const auth = authHeaders();
-    for (const [k, v] of Object.entries(auth)) {
-        headers.set(k, v);
-    }
-
-    const res = await fetch(url, {
-        ...options,
-        headers
-    });
-
-    if (res.status === 401) {
-        logout();
-        throw new Error("Unauthorized");
-    }
-
-    return res;
-}
-
-function setLoggedInUI(isLoggedIn) {
-    loginBox.classList.toggle("hidden", isLoggedIn);
-    appBox.classList.toggle("hidden", !isLoggedIn);
-}
-
-function logout() {
-    accessToken = null;
-    localStorage.removeItem("access_token");
-
-    Object.values(polling).forEach(id => clearInterval(id));
-    polling = {};
-
-    requestList.innerHTML = '<div class="empty-state">No requests yet.</div>';
-    statusMessage.innerText = "";
-    loginMessage.innerText = "";
-    loginPassword.value = "";
-
-    setLoggedInUI(false);
-    userInfo.innerText = "Logged out";
-}
-
-async function loadMe() {
-    const res = await apiFetch("/users/me");
-    if (!res.ok) throw new Error("Failed to load user");
-
-    const user = await res.json();
-    userInfo.innerText = `Logged in as ${user.name} (${user.email})`;
-}
-
-function addRequestCard(req) {
-    const emptyState = requestList.querySelector(".empty-state");
-    if (emptyState) emptyState.remove();
-
-    let card = document.getElementById("req-" + req.id);
-
-    if (!card) {
-        card = document.createElement("div");
-        card.className = "request-card";
-        card.id = "req-" + req.id;
-
-        card.innerHTML = `
-            <b class="req-name"></b>
-            <div>id: <span class="req-id"></span></div>
-            <div>status: <span class="status"></span></div>
-            <div>progress: <span class="progress"></span></div>
-
-            <div class="progress-wrap">
-                <div class="progress-bar"></div>
-            </div>
-
-            <div class="download" style="margin-top:10px;"></div>
-        `;
-
-        requestList.prepend(card);
-    }
-
-    card.querySelector(".req-name").innerText = req.name;
-    card.querySelector(".req-id").innerText = req.id;
-    card.querySelector(".status").innerText = req.status;
-    card.querySelector(".progress").innerText = `0/${req.total_jobs}`;
-}
-
-async function downloadExcel(request_id) {
-    const res = await apiFetch(`/requests/${request_id}/download`);
-    if (!res.ok) {
-        statusMessage.innerText = "Download failed";
-        return;
-    }
-
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${request_id}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-}
-
-async function fetchStatus(request_id) {
-    const res = await apiFetch(`/requests/${request_id}/status`);
-    if (!res.ok) return;
-
-    const data = await res.json();
-    const card = document.getElementById("req-" + request_id);
-    if (!card) return;
-
-    const statusEl = card.querySelector(".status");
-    const progressEl = card.querySelector(".progress");
-    const bar = card.querySelector(".progress-bar");
-    const downloadDiv = card.querySelector(".download");
-
-    statusEl.innerText = data.status;
-    progressEl.innerText = `${data.completed_jobs}/${data.total_jobs}`;
-
-    const percent = data.total_jobs > 0
-        ? Math.round((data.completed_jobs / data.total_jobs) * 100)
-        : 0;
-
-    bar.style.width = percent + "%";
-
-    if (data.status === "completed") {
-        if (downloadDiv.innerHTML === "") {
-            downloadDiv.innerHTML = `
-                <button type="button" class="secondary">Download Excel</button>
-            `;
-            downloadDiv.querySelector("button").addEventListener("click", () => {
-                downloadExcel(request_id);
-            });
-        }
-
-        clearInterval(polling[request_id]);
-        delete polling[request_id];
-    }
-}
-
-function startPolling(id) {
-    fetchStatus(id);
-    polling[id] = setInterval(() => {
-        fetchStatus(id).catch(() => {});
-    }, 5000);
-}
-
-async function loadRecentRequests() {
-    const res = await apiFetch("/requests/recent");
-    if (!res.ok) return;
-
-    const data = await res.json();
-
-    if (!data.length) return;
-
-    const emptyState = requestList.querySelector(".empty-state");
-    if (emptyState) emptyState.remove();
-
-    for (const req of data) {
-        addRequestCard(req);
-        startPolling(req.id);
-    }
-}
-
-loginForm.addEventListener("submit", async function(event) {
-    event.preventDefault();
-
-    loginMessage.innerText = "Logging in...";
-
-    const body = new URLSearchParams();
-    body.append("username", loginEmail.value.trim());
-    body.append("password", loginPassword.value);
-
-    try {
-        const res = await fetch("/login", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            body: body.toString()
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            loginMessage.innerText = data.detail || "Login failed";
-            return;
-        }
-
-        accessToken = data.access_token;
-        localStorage.setItem("access_token", accessToken);
-
-        loginMessage.innerText = "Login successful";
-        setLoggedInUI(true);
-
-        await loadMe();
-        await loadRecentRequests();
-    } catch (err) {
-        loginMessage.innerText = "Login error";
-    }
-});
-
-logoutBtn.addEventListener("click", logout);
-
-form.addEventListener("submit", function(event) {
-    event.preventDefault();
-
-    if (!accessToken) {
-        statusMessage.innerText = "Please log in first.";
-        return;
-    }
-
-    if (!fileInput.files[0]) {
-        statusMessage.innerText = "Select file";
-        return;
-    }
-
-    uploadProgressBlock.classList.remove("hidden");
-    uploadProgressBar.style.width = "0%";
-    uploadPercent.innerText = "0%";
-    statusMessage.innerText = "Uploading...";
-
-    const formData = new FormData(form);
-
-    // If the special job is NOT checked, we can optionally remove those fields from formData 
-    // to prevent sending empty/default values unnecessarily to the backend.
-    if (!specialJobCheck.checked) {
-        formData.delete("special_date");
-        formData.delete("special_time");
-        formData.delete("retry_number");
-    }
-
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/upload", true);
-    xhr.responseType = "json";
-    xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
-
-    xhr.upload.onprogress = function(e) {
-        if (e.lengthComputable) {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            uploadProgressBar.style.width = percent + "%";
-            uploadPercent.innerText = percent + "%";
-        }
-    };
-
-    xhr.onload = function() {
-        const result = xhr.response;
-
-        if (xhr.status === 401) {
-            logout();
-            return;
-        }
-
-        if (!result) {
-            statusMessage.innerText = "Upload failed";
-            return;
-        }
-
-        if (xhr.status >= 400) {
-            statusMessage.innerText = result.detail || "Upload failed";
-            return;
-        }
-
-        statusMessage.innerText = result.message;
-
-        addRequestCard({
-            id: result.request_id,
-            name: fileInput.files[0].name,
-            status: "queued",
-            total_jobs: 0
-        });
-
-        startPolling(result.request_id);
-    };
-
-    xhr.onerror = function() {
-        statusMessage.innerText = "Network error during upload";
-    };
-
-    xhr.send(formData);
-});
-
-async function boot() {
-    if (!accessToken) {
-        setLoggedInUI(false);
-        return;
-    }
-
-    try {
-        setLoggedInUI(true);
-        await loadMe();
-        await loadRecentRequests();
-    } catch (err) {
-        logout();
-    }
-}
-
-boot();
-</script>
 
 </body>
 </html>

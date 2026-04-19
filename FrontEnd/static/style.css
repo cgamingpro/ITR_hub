@@ -59,7 +59,9 @@ body {
 .mb-10 { margin-bottom: 15px; }
 .w-100 { width: 100%; }
 .text-primary { color: var(--primary); }
+.text-success { color: var(--success); }
 .text-warning { color: var(--warning); }
+.text-danger { color: var(--danger); }
 .text-muted { color: var(--text-muted); font-size: 0.9em; }
 
 /* ================= GLASS EFFECT ================= */
@@ -202,9 +204,82 @@ body {
   word-wrap: break-word;
 }
 
+/* ================= CUSTOM TABS (REQUEST PAGE) ================= */
+.custom-tabs { 
+  display: flex; gap: 5px; 
+  background: var(--input-bg); 
+  padding: 5px; 
+  border-radius: 12px; 
+  border: 1px solid var(--glass-border);
+}
+.custom-tabs .tab { 
+  padding: 8px 16px; 
+  border-radius: 8px; 
+  cursor: pointer; 
+  font-size: 0.9rem; 
+  font-weight: 600; 
+  color: var(--text-muted); 
+  transition: var(--transition); 
+}
+.custom-tabs .tab:hover { color: var(--text-main); }
+.custom-tabs .tab.active { 
+  background: var(--primary); 
+  color: white; 
+  box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3); 
+}
+
+/* ================= USER STATS ================= */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  width: 100%;
+}
+
+.stat-card {
+  padding: 18px 15px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: var(--transition);
+}
+
+.stat-card:hover { 
+  transform: translateY(-3px); 
+  border-color: var(--primary); 
+}
+
+.stat-card i { 
+  font-size: 2rem; 
+  opacity: 0.85; 
+}
+
+.stat-card h4 { 
+  font-size: 0.75rem; 
+  color: var(--text-muted); 
+  text-transform: uppercase; 
+  letter-spacing: 0.5px; 
+  margin-bottom: 4px; 
+}
+
+.stat-card h3 { 
+  font-size: 1.5rem; 
+  color: var(--text-main); 
+  font-weight: 700;
+}
+
 .box { padding: 25px; min-width: 0; width: 100%; }
 .box-header { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--glass-border); }
 .list-box.full-height { min-height: 70vh; }
+
+/* ================= EXPANDED RESULTS ================= */
+.results-scroll {
+  max-height: 250px;
+  overflow-y: auto;
+}
+.results-scroll::-webkit-scrollbar { width: 6px; }
+.results-scroll::-webkit-scrollbar-track { background: var(--input-bg); border-radius: 4px; }
+.results-scroll::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 4px; }
 
 /* ================= FORMS & INPUTS ================= */
 .input-group { position: relative; margin-bottom: 15px; width: 100%; }
@@ -212,7 +287,7 @@ body {
   position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
   color: var(--text-muted); transition: color 0.3s;
 }
-input[type="email"], input[type="password"], input[type="text"] {
+input[type="email"], input[type="password"], input[type="text"], input[type="date"], input[type="time"], input[type="number"] {
   width: 100%;
   padding: 14px 14px 14px 45px;
   border-radius: 12px;
@@ -221,9 +296,12 @@ input[type="email"], input[type="password"], input[type="text"] {
   color: var(--text-main);
   font-size: 1rem;
   transition: var(--transition);
+  color-scheme: dark;
 }
 input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2); }
 input:focus + i, .input-group:focus-within i { color: var(--primary); }
+
+:root.light-mode input[type="date"], :root.light-mode input[type="time"] { color-scheme: light; }
 
 .file-drop-area {
   border: 2px dashed rgba(14, 165, 233, 0.4);
@@ -242,7 +320,6 @@ input:focus + i, .input-group:focus-within i { color: var(--primary); }
 }
 .file-drop-area p { margin-top: 10px; word-break: break-all; } 
 
-/* Custom Checkboxes */
 .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
 .custom-checkbox {
   display: flex; align-items: center; gap: 10px;
@@ -367,6 +444,12 @@ button {
   .checkbox-group { grid-template-columns: 1fr; }
   #loginBox { width: 90%; padding: 30px 20px; }
   .box { padding: 15px; }
+  
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat-card { padding: 12px; gap: 10px; }
+  .stat-card i { font-size: 1.5rem; }
+  .stat-card h3 { font-size: 1.2rem; }
+
   .file-drop-area { padding: 20px 10px; }
   .request-card { padding: 12px; }
   .toast-container { right: 10px; left: 10px; top: 10px; }

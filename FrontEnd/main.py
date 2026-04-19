@@ -447,7 +447,153 @@ def login(user_cred: OAuth2PasswordRequestForm = Depends()):
     finally:
         cursor.close()
         con.close()
-    
+
+
+# ==========================================
+# 4. SCHEDULED & ADDITIONAL ENDPOINTS
+# ==========================================
+
+@app.get("/requests/scheduled")
+async def get_scheduled_requests(current_user_id = Depends(auth.get_current_user)):
+    """
+    Get all scheduled requests from the last 5 days for the current user
+    """
+    con = getdb()
+    cursor = con.cursor()
+    try:
+        cursor.execute("""
+            SELECT id, name, total_jobs, status, created_at, isschedule
+            FROM requests
+            WHERE user_id = %s::uuid
+            AND isschedule = true
+            AND created_at >= NOW() - INTERVAL '5 days'
+            ORDER BY created_at DESC
+        """, (current_user_id,))
+
+        rows = cursor.fetchall()
+        results = []
+        for r in rows:
+            remaining = redis_conn.get(f"batch:{r['id']}:remaining")
+            remaining = 0 if remaining is None else int(remaining)
+            completed = r["total_jobs"] - remaining
+            
+            results.append({
+                "id": str(r["id"]),
+                "name": r["name"],
+                "status": r["status"],
+                "total_jobs": r["total_jobs"],
+                "completed_jobs": completed,
+                "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+                "is_scheduled": r["isschedule"]
+            })
+        return results
+    finally:
+        cursor.close()
+        con.close()
+
+
+@app.get("/requests/{request_id}/results")
+async def get_request_results(request_id: str, current_user_id = Depends(auth.get_current_user)):
+    """
+    Get summary of results for a specific request (completed jobs with outputs)
+    """
+    con = getdb()
+    cursor = con.cursor()
+    try:
+        # Verify user owns this request
+        cursor.execute("""
+            SELECT id, name, total_jobs, status FROM requests WHERE id = %s::uuid AND user_id = %s::uuid
+        """, (request_id, current_user_id))
+        
+        req = cursor.fetchone()
+        if not req:
+            raise HTTPException(status_code=403, detail="Unauthorized access to request")
+        
+        cursor.execute("""
+            SELECT 
+                j.row_number,
+                j.job_type,
+                jr.output,
+                jr.success,
+                jr.error
+            FROM jobs j
+            LEFT JOIN job_results jr ON j.id = jr.job_id
+            WHERE j.request_id = %s::uuid
+            AND jr.job_id IS NOT NULL
+            ORDER BY j.row_number ASC
+        """, (request_id,))
+
+        rows = cursor.fetchall()
+        successful = sum(1 for r in rows if r["success"])
+        failed = sum(1 for r in rows if not r["success"])
+        
+        results = []
+        for r in rows:
+            results.append({
+                "row_number": r["row_number"],
+                "job_type": r["job_type"],
+                "output": r["output"],
+                "success": r["success"],
+                "error": r["error"]
+            })
+        
+        return {
+            "request_id": str(req["id"]),
+            "name": req["name"],
+            "total_jobs": req["total_jobs"],
+            "successful_jobs": successful,
+            "failed_jobs": failed,
+            "status": req["status"],
+            "results": results
+        }
+    finally:
+        cursor.close()
+        con.close()
+
+
+@app.get("/stats")
+async def get_user_stats(current_user_id = Depends(auth.get_current_user)):
+    """
+    Get comprehensive statistics for the current user's requests
+    """
+    con = getdb()
+    cursor = con.cursor()
+    try:
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_requests,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_requests,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_requests,
+                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_requests,
+                SUM(CASE WHEN isschedule = true THEN 1 ELSE 0 END) as scheduled_requests,
+                SUM(total_jobs) as total_jobs_processed
+            FROM requests
+            WHERE user_id = %s::uuid
+        """, (current_user_id,))
+        
+        stats = cursor.fetchone()
+        
+        cursor.execute("""
+            SELECT SUM(size_bytes) as total_storage_used
+            FROM uploads
+            WHERE user_id = %s::uuid
+        """, (current_user_id,))
+        
+        storage = cursor.fetchone()
+        
+        return {
+            "total_requests": stats["total_requests"] or 0,
+            "completed_requests": stats["completed_requests"] or 0,
+            "pending_requests": stats["pending_requests"] or 0,
+            "failed_requests": stats["failed_requests"] or 0,
+            "scheduled_requests": stats["scheduled_requests"] or 0,
+            "total_jobs_processed": stats["total_jobs_processed"] or 0,
+            "total_storage_used_bytes": storage["total_storage_used"] or 0
+        }
+    finally:
+        cursor.close()
+        con.close()
+
 async def get_combination_id(opt1, opt2, opt3):
     total = 0
     if opt1: total += 1

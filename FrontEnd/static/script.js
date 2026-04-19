@@ -23,8 +23,16 @@ const uploadProgressBar = document.getElementById("uploadProgressBar");
 const uploadPercent = document.getElementById("uploadPercent");
 
 const requestList = document.getElementById("requestList");
+const scheduledList = document.getElementById("scheduledList");
 const recentRequestList = document.getElementById("recentRequestList");
+const recentScheduledList = document.getElementById("recentScheduledList");
 const userInfo = document.getElementById("userInfo");
+
+// Special Job Elements
+const specialJobToggle = document.getElementById("specialJobToggle");
+const specialJobPanel = document.getElementById("specialJobPanel");
+const specialDate = document.getElementById("specialDate");
+const specialTime = document.getElementById("specialTime");
 
 // assistant
 const assistantForm = document.getElementById("assistantUploadForm");
@@ -38,13 +46,11 @@ const assistantRequestList = document.getElementById("assistantRequestList");
 const themeToggle = document.getElementById("themeToggle");
 const currentTheme = localStorage.getItem("theme");
 
-// Apply saved theme on load
 if (currentTheme === "light") {
   document.documentElement.classList.add("light-mode");
   if(themeToggle) themeToggle.innerHTML = `<i class="fa-solid fa-sun text-warning"></i> <span class="nav-text">Light Mode</span>`;
 }
 
-// Toggle theme on click
 themeToggle?.addEventListener("click", () => {
   document.documentElement.classList.toggle("light-mode");
   
@@ -57,11 +63,42 @@ themeToggle?.addEventListener("click", () => {
   }
 });
 
-// ================= LIVE SEARCH =================
+// ================= SPECIAL JOB TOGGLE =================
+if (specialJobToggle) {
+  specialJobToggle.addEventListener("change", (e) => {
+    if (e.target.checked) {
+      specialJobPanel.classList.remove("hidden");
+      specialDate.required = true;
+      specialTime.required = true;
+    } else {
+      specialJobPanel.classList.add("hidden");
+      specialDate.required = false;
+      specialTime.required = false;
+    }
+  });
+}
+
+// ================= LIVE SEARCH & TABS =================
+function switchRequestTab(tabName) {
+  document.querySelectorAll('.custom-tabs .tab').forEach(t => t.classList.remove('active'));
+  
+  if (tabName === 'all') {
+    document.querySelectorAll('.custom-tabs .tab')[0].classList.add('active');
+    requestList.classList.remove('hidden');
+    scheduledList.classList.add('hidden');
+  } else {
+    document.querySelectorAll('.custom-tabs .tab')[1].classList.add('active');
+    requestList.classList.add('hidden');
+    scheduledList.classList.remove('hidden');
+  }
+}
+
 const searchInput = document.getElementById("searchInput");
 searchInput?.addEventListener("input", (e) => {
   const term = e.target.value.toLowerCase();
-  const cards = requestList.querySelectorAll(".request-card");
+  
+  // Search through both lists so swapping tabs doesn't break
+  const cards = document.querySelectorAll("#requestList .request-card, #scheduledList .request-card");
   
   cards.forEach(card => {
     const name = card.querySelector(".req-name").innerText.toLowerCase();
@@ -89,7 +126,6 @@ function showToast(message, type = "info") {
   if (type === "error") icon = "fa-circle-exclamation";
 
   toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
-  
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -99,7 +135,6 @@ function showToast(message, type = "info") {
   }, 3000);
 }
 
-// ================= AUTH HEADERS =================
 function authHeaders() {
   return accessToken ? { Authorization: "Bearer " + accessToken } : {};
 }
@@ -107,13 +142,9 @@ function authHeaders() {
 async function apiFetch(url, options = {}) {
   const headers = new Headers(options.headers || {});
   const auth = authHeaders();
-
-  for (const [k, v] of Object.entries(auth)) {
-    headers.set(k, v);
-  }
+  for (const [k, v] of Object.entries(auth)) headers.set(k, v);
 
   const res = await fetch(url, { ...options, headers });
-
   if (res.status === 401) {
     logout();
     throw new Error("Unauthorized");
@@ -133,10 +164,7 @@ function setLoggedInUI(isLoggedIn) {
 }
 
 function showSection(sectionId) {
-  document.querySelectorAll(".page-section").forEach(sec => {
-    sec.classList.remove("active");
-  });
-  
+  document.querySelectorAll(".page-section").forEach(sec => sec.classList.remove("active"));
   const targetSec = document.getElementById(sectionId);
   if (targetSec) targetSec.classList.add("active");
 
@@ -145,10 +173,7 @@ function showSection(sectionId) {
     window.event.currentTarget.classList.add("active");
   }
   
-  // Auto-close sidebar on mobile after clicking a link
-  if (window.innerWidth <= 768) {
-    sidebar.classList.remove("mobile-active");
-  }
+  if (window.innerWidth <= 768) sidebar.classList.remove("mobile-active");
 }
 
 sidebarToggle?.addEventListener("click", () => {
@@ -156,43 +181,116 @@ sidebarToggle?.addEventListener("click", () => {
   mainContent.classList.toggle("expanded");
 });
 
-mobileToggleBtn?.addEventListener("click", () => {
-  sidebar.classList.toggle("mobile-active");
-});
+mobileToggleBtn?.addEventListener("click", () => sidebar.classList.toggle("mobile-active"));
 
-// ================= LOGOUT =================
 function logout() {
   accessToken = null;
   localStorage.removeItem("access_token");
-
   Object.values(polling).forEach(id => clearInterval(id));
   polling = {};
   knownStatuses = {}; 
 
   if (requestList) requestList.innerHTML = "";
+  if (scheduledList) scheduledList.innerHTML = "";
   if (recentRequestList) recentRequestList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-inbox fa-2x"></i><p>No active jobs</p></div>`;
+  if (recentScheduledList) recentScheduledList.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;"><i class="fa-solid fa-calendar fa-2x"></i><p>No scheduled jobs</p></div>`;
   if (assistantRequestList) assistantRequestList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-file-circle-question fa-2x"></i><p>Waiting for input...</p></div>`;
 
   setLoggedInUI(false);
   showToast("Logged out successfully", "info");
 }
 
-// ================= USER =================
+// ================= USER & STATS =================
 async function loadMe() {
   const res = await apiFetch("/users/me");
   if (!res.ok) return;
   const user = await res.json();
-
   if (userInfo) userInfo.innerText = user.name;
   
   const dashName = document.getElementById("dashboardName");
   if (dashName) dashName.innerText = `Hey, ${user.name}! 👋`;
-  
   const dashEmail = document.getElementById("dashboardEmail");
   if (dashEmail) dashEmail.innerText = user.email;
 }
 
-// ================= REQUEST UI =================
+async function loadStats() {
+  try {
+    const res = await apiFetch("/stats");
+    if (!res.ok) return;
+    const data = await res.json();
+
+    document.getElementById("statTotal").innerText = data.total_requests || 0;
+    document.getElementById("statCompleted").innerText = data.completed_requests || 0;
+    document.getElementById("statPending").innerText = data.pending_requests || 0;
+    document.getElementById("statFailed").innerText = data.failed_requests || 0;
+    document.getElementById("statScheduled").innerText = data.scheduled_requests || 0;
+    document.getElementById("statProcessed").innerText = data.total_jobs_processed || 0;
+  } catch (e) {
+    console.error("Failed to load user stats");
+  }
+}
+
+// ================= EXPAND RESULTS UI =================
+async function toggleRequestDetails(headerElement, requestId) {
+  const card = headerElement.closest('.request-card');
+  if (!card) return;
+
+  const resultsZone = card.querySelector('.results-zone');
+  const icon = headerElement.querySelector('.toggle-icon');
+
+  if (resultsZone.classList.contains('hidden')) {
+    resultsZone.classList.remove('hidden');
+    icon.style.transform = 'rotate(180deg)';
+
+    if (resultsZone.innerHTML.trim() === '') {
+      resultsZone.innerHTML = `<div style="text-align:center; padding: 15px;"><i class="fa-solid fa-circle-notch fa-spin text-primary"></i> Loading details...</div>`;
+      try {
+        const res = await apiFetch(`/requests/${requestId}/results`);
+        if (res.ok) {
+          const data = await res.json();
+          renderResults(data, resultsZone);
+        } else {
+          resultsZone.innerHTML = `<div class="text-danger" style="text-align:center; padding: 10px;">Failed to load results.</div>`;
+        }
+      } catch (e) {
+        resultsZone.innerHTML = `<div class="text-danger" style="text-align:center; padding: 10px;">Error connecting to server.</div>`;
+      }
+    }
+  } else {
+    resultsZone.classList.add('hidden');
+    icon.style.transform = 'rotate(0deg)';
+  }
+}
+
+function renderResults(data, container) {
+  if (!data.results || data.results.length === 0) {
+    container.innerHTML = `<div class="text-muted" style="text-align:center; padding: 15px; font-size: 0.9em;">No detailed job results available yet.</div>`;
+    return;
+  }
+
+  let html = `<div class="results-scroll" style="margin-top: 10px; border-top: 1px solid var(--glass-border); padding-top: 10px;">`;
+  data.results.forEach(r => {
+    const statusColor = r.success ? 'var(--success)' : 'var(--danger)';
+    const statusIcon = r.success ? 'fa-check' : 'fa-xmark';
+    const outputText = r.success ? (r.output || 'Completed successfully') : (r.error || 'Job failed');
+    
+    html += `
+      <div style="background: var(--input-bg); padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid ${statusColor};">
+        <div style="display:flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85em;">
+          <strong>Row ${r.row_number} - ${r.job_type}</strong>
+          <i class="fa-solid ${statusIcon}" style="color: ${statusColor};"></i>
+        </div>
+        <div style="color: var(--text-muted); font-size: 0.8em; word-break: break-all;">
+          ${outputText}
+        </div>
+      </div>
+    `;
+  });
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+// ================= REQUEST UI (OPTIMIZED & BUG FIXED) =================
 function createRequestCard(req, container) {
   const empty = container.querySelector(".empty-state");
   if (empty) empty.remove();
@@ -203,27 +301,54 @@ function createRequestCard(req, container) {
     card = document.createElement("div");
     card.className = "request-card glass animated slide-up";
     card.dataset.reqId = req.id; 
+    
+    const scheduledBadge = req.is_scheduled ? `<span class="badge" style="background: rgba(14, 165, 233, 0.2); color: var(--primary); border: 1px solid var(--primary); margin-left: 5px;"><i class="fa-solid fa-clock"></i> Scheduled</span>` : '';
+    
+    // Parse immediate status to avoid relying on the first poll
+    const statusText = req.status || "queued";
+    const statusClass = `badge-${statusText}`;
+    const totalJobs = req.total_jobs || 0;
+    
+    // BUG FIX: If it's already completed, force completed_jobs to equal total_jobs
+    let completedJobs = req.completed_jobs || 0;
+    if (statusText === "completed") {
+        completedJobs = totalJobs;
+    }
+
+    const percent = totalJobs ? Math.round((completedJobs / totalJobs) * 100) : 0;
+    const barColor = statusText === "completed" ? "#10b981" : "var(--primary)";
+    
+    // Add download button immediately if it's already completed
+    const downloadBtn = statusText === "completed" ? 
+      `<button class="btn-success btn-sm w-100" onclick="downloadExcel('${req.id}')"><i class="fa-solid fa-download"></i> Download Report</button>` : '';
 
     card.innerHTML = `
-      <div class="card-header">
-        <b class="req-name"><i class="fa-solid fa-file-excel text-primary"></i> <span></span></b>
-        <span class="status badge badge-queued">queued</span>
+      <div class="card-header" style="cursor: pointer; user-select: none;" onclick="toggleRequestDetails(this, '${req.id}')">
+        <b class="req-name" style="display: flex; align-items: center; flex-wrap: wrap;">
+           <i class="fa-solid fa-file-excel text-primary" style="margin-right: 8px;"></i> 
+           <span></span>
+           ${scheduledBadge}
+        </b>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="status badge ${statusClass}">${statusText}</span>
+          <i class="fa-solid fa-chevron-down toggle-icon text-muted" style="transition: transform 0.3s ease;"></i>
+        </div>
       </div>
       <div class="card-body">
         <div class="card-meta">ID: <span class="req-id text-muted"></span></div>
-        <div class="card-meta">Progress: <span class="progress-text text-muted"></span></div>
+        <div class="card-meta">Progress: <span class="progress-text text-muted">${completedJobs}/${totalJobs}</span></div>
       </div>
       <div class="progress-wrap mt-10">
-        <div class="progress-bar"></div>
+        <div class="progress-bar" style="width: ${percent}%; background: ${barColor};"></div>
       </div>
-      <div class="download-zone mt-10"></div>
+      <div class="download-zone mt-10">${downloadBtn}</div>
+      <div class="results-zone hidden"></div>
     `;
     container.prepend(card); 
   }
 
   card.querySelector(".req-name span").innerText = req.name || "File";
   card.querySelector(".req-id").innerText = req.id;
-  card.querySelector(".progress-text").innerText = `0/${req.total_jobs || 0}`;
 
   return card;
 }
@@ -259,6 +384,10 @@ async function fetchStatus(request_id) {
         downloadDiv.innerHTML = `<button class="btn-success btn-sm w-100"><i class="fa-solid fa-download"></i> Download Report</button>`;
         downloadDiv.querySelector("button").onclick = () => downloadExcel(request_id);
       }
+      
+      if (previousStatus !== "completed") {
+         card.querySelector('.results-zone').innerHTML = '';
+      }
     }
   });
 
@@ -266,8 +395,8 @@ async function fetchStatus(request_id) {
     if (previousStatus && previousStatus !== "completed") {
       const idString = request_id ? request_id.toString() : "";
       showToast(`Job ${idString.substring(0,6)} completed!`, "success");
+      loadStats(); 
     }
-
     if (polling[request_id]) {
       clearInterval(polling[request_id]);
       delete polling[request_id];
@@ -294,19 +423,20 @@ async function downloadExcel(id) {
   window.URL.revokeObjectURL(url);
 }
 
-// ================= DATA LOADERS =================
+// ================= DATA LOADERS (OPTIMIZED) =================
 async function loadRecentRequests() {
   const res = await apiFetch("/requests/recent");
   if (!res.ok) return;
   const data = await res.json();
-  
   if(!data || data.length === 0) return;
 
   recentRequestList.innerHTML = ""; 
-  
   data.slice(-3).forEach(req => {
     createRequestCard(req, recentRequestList);
-    startPolling(req.id);
+    // ONLY poll if it is NOT finished
+    if (req.status !== "completed" && req.status !== "failed") {
+      startPolling(req.id);
+    }
   });
 }
 
@@ -314,19 +444,47 @@ async function loadAllRequests() {
   const res = await apiFetch("/requests/recent");
   if (!res.ok) return;
   const data = await res.json();
-  
   if(!data || data.length === 0) return;
 
   requestList.innerHTML = ""; 
   data.forEach(req => {
     createRequestCard(req, requestList);
-    startPolling(req.id);
+    // ONLY poll if it is NOT finished
+    if (req.status !== "completed" && req.status !== "failed") {
+      startPolling(req.id);
+    }
   });
   
-  // Apply current search filter to new data if a search is active
-  if(searchInput && searchInput.value) {
-    searchInput.dispatchEvent(new Event('input'));
+  if(searchInput && searchInput.value) searchInput.dispatchEvent(new Event('input'));
+}
+
+async function loadScheduledRequests() {
+  const res = await apiFetch("/requests/scheduled");
+  if (!res.ok) return;
+  const data = await res.json();
+
+  if(!data || data.length === 0) {
+    if (recentScheduledList) recentScheduledList.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;"><i class="fa-solid fa-calendar fa-2x"></i><p>No scheduled jobs</p></div>`;
+    if (scheduledList) scheduledList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-calendar fa-2x"></i><p>No scheduled jobs found</p></div>`;
+    return;
   }
+
+  recentScheduledList.innerHTML = ""; 
+  scheduledList.innerHTML = "";
+
+  // Dashboard top 3
+  data.slice(0, 3).forEach(req => {
+    createRequestCard(req, recentScheduledList);
+    if (req.status !== "completed" && req.status !== "failed") startPolling(req.id);
+  });
+
+  // Tab view all
+  data.forEach(req => {
+    createRequestCard(req, scheduledList);
+    if (req.status !== "completed" && req.status !== "failed") startPolling(req.id);
+  });
+  
+  if(searchInput && searchInput.value) searchInput.dispatchEvent(new Event('input'));
 }
 
 // ================= UPLOADERS =================
@@ -369,6 +527,8 @@ function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentT
 
     await loadRecentRequests();
     await loadAllRequests();
+    await loadScheduledRequests(); 
+    await loadStats(); 
     
     if (isAssistant) {
       targetListContainer.innerHTML = "";
@@ -380,6 +540,12 @@ function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentT
     setTimeout(() => {
         progressBlock.classList.add("hidden");
         form.reset();
+        
+        if (form.id === "uploadForm") {
+          if (specialJobPanel) specialJobPanel.classList.add("hidden");
+          if (specialDate) specialDate.required = false;
+          if (specialTime) specialTime.required = false;
+        }
         
         const textElement = fileInputEl.nextElementSibling;
         if (textElement && textElement.tagName === "P") {
@@ -429,8 +595,10 @@ if(loginForm) {
       showToast("Welcome back!", "success");
 
       await loadMe();
+      await loadStats(); 
       await loadRecentRequests();
       await loadAllRequests(); 
+      await loadScheduledRequests();
 
       showSection("dashboardSection");
       setLoggedInUI(true);
@@ -445,7 +613,7 @@ if(loginForm) {
 
 if(logoutBtn) logoutBtn.addEventListener("click", logout);
 
-// ================= BOOT (AUTO-LOGIN HANDLER) =================
+// ================= BOOT =================
 const bootOverlay = document.createElement("div");
 bootOverlay.className = "drop-overlay glass active";
 bootOverlay.style.border = "none"; 
@@ -469,16 +637,16 @@ async function boot() {
 
   try {
     await loadMe();
+    await loadStats();
     await loadRecentRequests();
     await loadAllRequests(); 
+    await loadScheduledRequests();
     showSection("dashboardSection");
     setLoggedInUI(true);
   } catch (e) {
     logout();
   } finally {
-    if (document.body.contains(bootOverlay)) {
-      bootOverlay.remove();
-    }
+    if (document.body.contains(bootOverlay)) bootOverlay.remove();
   }
 }
 
@@ -489,17 +657,12 @@ dropOverlay.innerHTML = `<div style="text-align:center"><i class="fa-solid fa-cl
 document.body.appendChild(dropOverlay);
 
 window.addEventListener("dragenter", (e) => {
-  if (e.dataTransfer && e.dataTransfer.types.includes("Files")) {
-    dropOverlay.classList.add("active");
-  }
+  if (e.dataTransfer && e.dataTransfer.types.includes("Files")) dropOverlay.classList.add("active");
 });
-
 window.addEventListener("dragleave", (e) => { 
   if (e.target === dropOverlay) dropOverlay.classList.remove("active"); 
 });
-
 window.addEventListener("dragover", (e) => e.preventDefault());
-
 window.addEventListener("drop", (e) => { 
   e.preventDefault(); 
   dropOverlay.classList.remove("active"); 
@@ -512,12 +675,10 @@ window.addEventListener("drop", (e) => {
   
   if (targetInput) {
     targetInput.files = files; 
-    
     const textElement = targetInput.nextElementSibling;
     if (textElement && textElement.tagName === "P") {
       textElement.innerHTML = `<span style="color: #10b981; font-weight: bold;"><i class="fa-solid fa-check"></i> ${files[0].name} ready</span>`;
     }
-    
     showToast(`Attached: ${files[0].name}`, "info");
   }
 });
