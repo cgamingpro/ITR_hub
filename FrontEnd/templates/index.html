@@ -64,10 +64,11 @@
         <i class="fa-solid fa-moon"></i> <span class="nav-text">Dark Mode</span>
       </button>
 
-      <div class="user-profile" data-tooltip="Profile">
+      <div id="userProfileBtn" class="user-profile clickable" data-tooltip="Profile Settings">
         <i class="fa-solid fa-circle-user fa-2x user-avatar text-primary"></i>
         <span id="userInfo" class="nav-text user-name">Loading...</span>
       </div>
+      
       <button id="logoutBtn" class="btn-danger w-100 mt-10">
         <i class="fa-solid fa-power-off"></i> <span class="nav-text">Logout</span>
       </button>
@@ -280,6 +281,32 @@
     </section>
 
   </main>
+</div>
+
+<div id="profileModal" class="modal hidden">
+  <div class="modal-content glass box">
+    <div class="modal-header">
+      <h3 style="margin: 0;"><i class="fa-solid fa-user-shield text-primary"></i> Account Details</h3>
+      <button id="closeProfileBtn" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body" style="padding: 30px;">
+      <div class="text-center" style="margin-bottom: 25px;">
+        <i class="fa-solid fa-circle-user fa-5x text-primary" style="margin-bottom: 15px;"></i>
+        <h2 id="modalUserName" style="margin-bottom: 5px;">Loading...</h2>
+        <p id="modalUserEmail" class="text-muted">Loading...</p>
+      </div>
+      
+      <div class="stats-grid" style="grid-template-columns: 1fr;">
+        <div class="stat-card glass" style="justify-content: center; text-align: center; background: rgba(14, 165, 233, 0.1); border-color: var(--primary);">
+          <i class="fa-solid fa-hard-drive text-primary"></i>
+          <div>
+            <h4>Total Cloud Storage Used</h4>
+            <h3 id="modalStorageUsed" style="font-size: 2rem;">0 KB</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 </body>

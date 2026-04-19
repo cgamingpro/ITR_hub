@@ -1,5 +1,5 @@
 let polling = {};
-let knownStatuses = {}; // Tracks statuses to prevent toast spam
+let knownStatuses = {}; 
 let accessToken = localStorage.getItem("access_token");
 
 const loginBox = document.getElementById("loginBox");
@@ -42,6 +42,11 @@ const assistantPercent = document.getElementById("assistantPercent");
 const assistantProgress = document.getElementById("assistantProgressBlock");
 const assistantRequestList = document.getElementById("assistantRequestList");
 
+// Profile Modal Elements
+const profileModal = document.getElementById("profileModal");
+const userProfileBtn = document.getElementById("userProfileBtn");
+const closeProfileBtn = document.getElementById("closeProfileBtn");
+
 // ================= THEME MANAGER =================
 const themeToggle = document.getElementById("themeToggle");
 const currentTheme = localStorage.getItem("theme");
@@ -62,6 +67,30 @@ themeToggle?.addEventListener("click", () => {
     themeToggle.innerHTML = `<i class="fa-solid fa-moon"></i> <span class="nav-text">Dark Mode</span>`;
   }
 });
+
+// ================= MODAL LOGIC =================
+userProfileBtn?.addEventListener("click", () => {
+  profileModal.classList.remove("hidden");
+});
+
+closeProfileBtn?.addEventListener("click", () => {
+  profileModal.classList.add("hidden");
+});
+
+// Close modal if clicked outside the content box
+profileModal?.addEventListener("click", (e) => {
+  if (e.target === profileModal) profileModal.classList.add("hidden");
+});
+
+// ================= UTILITIES =================
+function formatBytes(bytes, decimals = 2) {
+  if (!+bytes) return '0 Bytes';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
 
 // ================= SPECIAL JOB TOGGLE =================
 if (specialJobToggle) {
@@ -96,8 +125,6 @@ function switchRequestTab(tabName) {
 const searchInput = document.getElementById("searchInput");
 searchInput?.addEventListener("input", (e) => {
   const term = e.target.value.toLowerCase();
-  
-  // Search through both lists so swapping tabs doesn't break
   const cards = document.querySelectorAll("#requestList .request-card, #scheduledList .request-card");
   
   cards.forEach(card => {
@@ -172,7 +199,6 @@ function showSection(sectionId) {
   if (window.event && window.event.currentTarget && window.event.currentTarget.tagName === 'LI') {
     window.event.currentTarget.classList.add("active");
   }
-  
   if (window.innerWidth <= 768) sidebar.classList.remove("mobile-active");
 }
 
@@ -205,12 +231,18 @@ async function loadMe() {
   const res = await apiFetch("/users/me");
   if (!res.ok) return;
   const user = await res.json();
+  
   if (userInfo) userInfo.innerText = user.name;
   
   const dashName = document.getElementById("dashboardName");
   if (dashName) dashName.innerText = `Hey, ${user.name}! 👋`;
+  
   const dashEmail = document.getElementById("dashboardEmail");
   if (dashEmail) dashEmail.innerText = user.email;
+
+  // Populate Profile Modal
+  document.getElementById("modalUserName").innerText = user.name;
+  document.getElementById("modalUserEmail").innerText = user.email;
 }
 
 async function loadStats() {
@@ -225,6 +257,11 @@ async function loadStats() {
     document.getElementById("statFailed").innerText = data.failed_requests || 0;
     document.getElementById("statScheduled").innerText = data.scheduled_requests || 0;
     document.getElementById("statProcessed").innerText = data.total_jobs_processed || 0;
+
+    // Populate Modal Storage
+    const storageBytes = data.total_storage_used_bytes || 0;
+    document.getElementById("modalStorageUsed").innerText = formatBytes(storageBytes);
+
   } catch (e) {
     console.error("Failed to load user stats");
   }
@@ -290,7 +327,7 @@ function renderResults(data, container) {
   container.innerHTML = html;
 }
 
-// ================= REQUEST UI (OPTIMIZED & BUG FIXED) =================
+// ================= REQUEST UI =================
 function createRequestCard(req, container) {
   const empty = container.querySelector(".empty-state");
   if (empty) empty.remove();
@@ -304,12 +341,10 @@ function createRequestCard(req, container) {
     
     const scheduledBadge = req.is_scheduled ? `<span class="badge" style="background: rgba(14, 165, 233, 0.2); color: var(--primary); border: 1px solid var(--primary); margin-left: 5px;"><i class="fa-solid fa-clock"></i> Scheduled</span>` : '';
     
-    // Parse immediate status to avoid relying on the first poll
     const statusText = req.status || "queued";
     const statusClass = `badge-${statusText}`;
     const totalJobs = req.total_jobs || 0;
     
-    // BUG FIX: If it's already completed, force completed_jobs to equal total_jobs
     let completedJobs = req.completed_jobs || 0;
     if (statusText === "completed") {
         completedJobs = totalJobs;
@@ -318,7 +353,6 @@ function createRequestCard(req, container) {
     const percent = totalJobs ? Math.round((completedJobs / totalJobs) * 100) : 0;
     const barColor = statusText === "completed" ? "#10b981" : "var(--primary)";
     
-    // Add download button immediately if it's already completed
     const downloadBtn = statusText === "completed" ? 
       `<button class="btn-success btn-sm w-100" onclick="downloadExcel('${req.id}')"><i class="fa-solid fa-download"></i> Download Report</button>` : '';
 
@@ -384,7 +418,6 @@ async function fetchStatus(request_id) {
         downloadDiv.innerHTML = `<button class="btn-success btn-sm w-100"><i class="fa-solid fa-download"></i> Download Report</button>`;
         downloadDiv.querySelector("button").onclick = () => downloadExcel(request_id);
       }
-      
       if (previousStatus !== "completed") {
          card.querySelector('.results-zone').innerHTML = '';
       }
@@ -423,7 +456,7 @@ async function downloadExcel(id) {
   window.URL.revokeObjectURL(url);
 }
 
-// ================= DATA LOADERS (OPTIMIZED) =================
+// ================= DATA LOADERS =================
 async function loadRecentRequests() {
   const res = await apiFetch("/requests/recent");
   if (!res.ok) return;
@@ -433,7 +466,6 @@ async function loadRecentRequests() {
   recentRequestList.innerHTML = ""; 
   data.slice(-3).forEach(req => {
     createRequestCard(req, recentRequestList);
-    // ONLY poll if it is NOT finished
     if (req.status !== "completed" && req.status !== "failed") {
       startPolling(req.id);
     }
@@ -449,12 +481,10 @@ async function loadAllRequests() {
   requestList.innerHTML = ""; 
   data.forEach(req => {
     createRequestCard(req, requestList);
-    // ONLY poll if it is NOT finished
     if (req.status !== "completed" && req.status !== "failed") {
       startPolling(req.id);
     }
   });
-  
   if(searchInput && searchInput.value) searchInput.dispatchEvent(new Event('input'));
 }
 
@@ -472,19 +502,54 @@ async function loadScheduledRequests() {
   recentScheduledList.innerHTML = ""; 
   scheduledList.innerHTML = "";
 
-  // Dashboard top 3
   data.slice(0, 3).forEach(req => {
     createRequestCard(req, recentScheduledList);
     if (req.status !== "completed" && req.status !== "failed") startPolling(req.id);
   });
 
-  // Tab view all
   data.forEach(req => {
     createRequestCard(req, scheduledList);
     if (req.status !== "completed" && req.status !== "failed") startPolling(req.id);
   });
   
   if(searchInput && searchInput.value) searchInput.dispatchEvent(new Event('input'));
+}
+
+// ================= FILE SELECTION HANDLER =================
+function handleFileSelection(inputEl, isAssistant = false) {
+  const textElement = inputEl.nextElementSibling;
+  
+  if (inputEl.files && inputEl.files.length > 0) {
+    const fileName = inputEl.files[0].name;
+    if (textElement && textElement.tagName === "P") {
+      textElement.innerHTML = `
+        <span style="color: #10b981; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; z-index: 20;">
+          <i class="fa-solid fa-check"></i> ${fileName} ready 
+          <span class="clear-file-btn" title="Remove file">
+            <i class="fa-solid fa-xmark"></i>
+          </span>
+        </span>`;
+
+      const clearBtn = textElement.querySelector('.clear-file-btn');
+      clearBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        inputEl.value = ""; 
+        textElement.innerHTML = isAssistant ? "Upload document for analysis" : "Choose a file or drag it here";
+      });
+    }
+  } else {
+    if (textElement && textElement.tagName === "P") {
+      textElement.innerHTML = isAssistant ? "Upload document for analysis" : "Choose a file or drag it here";
+    }
+  }
+}
+
+if (fileInput) {
+  fileInput.addEventListener("change", () => handleFileSelection(fileInput, false));
+}
+if (assistantFileInput) {
+  assistantFileInput.addEventListener("change", () => handleFileSelection(assistantFileInput, true));
 }
 
 // ================= UPLOADERS =================
@@ -675,10 +740,7 @@ window.addEventListener("drop", (e) => {
   
   if (targetInput) {
     targetInput.files = files; 
-    const textElement = targetInput.nextElementSibling;
-    if (textElement && textElement.tagName === "P") {
-      textElement.innerHTML = `<span style="color: #10b981; font-weight: bold;"><i class="fa-solid fa-check"></i> ${files[0].name} ready</span>`;
-    }
+    handleFileSelection(targetInput, !dashboardActive);
     showToast(`Attached: ${files[0].name}`, "info");
   }
 });
