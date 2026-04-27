@@ -332,24 +332,25 @@ function createRequestCard(req, container) {
 
   let card = container.querySelector(`.request-card[data-req-id="${req.id}"]`);
 
+  const statusText = req.status || "queued";
+  const statusClass = `badge-${statusText}`;
+  const totalJobs = req.total_jobs || 0;
+  
+  let completedJobs = req.completed_jobs || 0;
+  if (statusText === "completed") {
+      completedJobs = totalJobs;
+  }
+
+  const percent = totalJobs ? Math.round((completedJobs / totalJobs) * 100) : 0;
+  const barColor = statusText === "completed" ? "#10b981" : "var(--primary)";
+
+  // If card doesn't exist, create it. If it does, strictly update it to avoid DOM flicker!
   if (!card) {
     card = document.createElement("div");
     card.className = "request-card glass animated slide-up";
     card.dataset.reqId = req.id; 
     
     const scheduledBadge = req.is_scheduled ? `<span class="badge" style="background: rgba(14, 165, 233, 0.2); color: var(--primary); border: 1px solid var(--primary); margin-left: 5px;"><i class="fa-solid fa-clock"></i> Scheduled</span>` : '';
-    
-    const statusText = req.status || "queued";
-    const statusClass = `badge-${statusText}`;
-    const totalJobs = req.total_jobs || 0;
-    
-    let completedJobs = req.completed_jobs || 0;
-    if (statusText === "completed") {
-        completedJobs = totalJobs;
-    }
-
-    const percent = totalJobs ? Math.round((completedJobs / totalJobs) * 100) : 0;
-    const barColor = statusText === "completed" ? "#10b981" : "var(--primary)";
     
     const downloadBtn = statusText === "completed" ? 
       `<button class="btn-success btn-sm w-100" onclick="downloadExcel('${req.id}')"><i class="fa-solid fa-download"></i> Download Report</button>` : '';
@@ -377,6 +378,27 @@ function createRequestCard(req, container) {
       <div class="results-zone hidden"></div>
     `;
     container.prepend(card); 
+  } else {
+    // Safe DOM update for existing elements
+    const statusBadge = card.querySelector(".status");
+    if (statusBadge) {
+        statusBadge.innerText = statusText;
+        statusBadge.className = `status badge ${statusClass}`;
+    }
+
+    const progressText = card.querySelector(".progress-text");
+    if (progressText) progressText.innerText = `${completedJobs}/${totalJobs}`;
+
+    const bar = card.querySelector(".progress-bar");
+    if (bar) {
+        bar.style.width = percent + "%";
+        bar.style.background = barColor;
+    }
+
+    const downloadDiv = card.querySelector(".download-zone");
+    if (statusText === "completed" && downloadDiv && !downloadDiv.innerHTML.trim()) {
+        downloadDiv.innerHTML = `<button class="btn-success btn-sm w-100" onclick="downloadExcel('${req.id}')"><i class="fa-solid fa-download"></i> Download Report</button>`;
+    }
   }
 
   card.querySelector(".req-name span").innerText = req.name || "File";
@@ -461,7 +483,7 @@ async function loadRecentRequests() {
   const data = await res.json();
   if(!data || data.length === 0) return;
 
-  recentRequestList.innerHTML = ""; 
+  // Removed .innerHTML = "" so the UI doesn't visually glitch and delete cards while they are polling
   data.slice(-3).forEach(req => {
     createRequestCard(req, recentRequestList);
     if (req.status !== "completed" && req.status !== "failed") {
@@ -476,7 +498,7 @@ async function loadAllRequests() {
   const data = await res.json();
   if(!data || data.length === 0) return;
 
-  requestList.innerHTML = ""; 
+  // Removed .innerHTML = "" 
   data.forEach(req => {
     createRequestCard(req, requestList);
     if (req.status !== "completed" && req.status !== "failed") {
@@ -497,9 +519,7 @@ async function loadScheduledRequests() {
     return;
   }
 
-  recentScheduledList.innerHTML = ""; 
-  scheduledList.innerHTML = "";
-
+  // Removed .innerHTML = "" 
   data.slice(0, 3).forEach(req => {
     createRequestCard(req, recentScheduledList);
     if (req.status !== "completed" && req.status !== "failed") startPolling(req.id);
@@ -657,7 +677,6 @@ function renderAiResult(query, data) {
 
   if (data.type === "query_result") {
     
-    // Feature: Display the raw executed SQL
     if (data.executed_sql) {
       contentHtml += `<div style="font-family: monospace; font-size: 0.8em; color: var(--text-muted); margin-bottom: 10px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap;">${data.executed_sql}</div>`;
     }
@@ -821,3 +840,17 @@ window.addEventListener("drop", (e) => {
 });
 
 boot();
+
+
+// ================= PWA SERVICE WORKER =================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/static/sw.js')
+      .then(registration => {
+        console.log('Service Worker registered with scope:', registration.scope);
+      })
+      .catch(error => {
+        console.error('Service Worker registration failed:', error);
+      });
+  });
+}
