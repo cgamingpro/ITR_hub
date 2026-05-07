@@ -1,4 +1,5 @@
 {
     "python-envs.pythonProjects": [],
-    "python.analysis.typeCheckingMode": "off"
+    "python.analysis.typeCheckingMode": "off",
+    "workbench.browser.openLocalhostLinks": false
 }

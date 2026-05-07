@@ -344,7 +344,6 @@ function createRequestCard(req, container) {
   const percent = totalJobs ? Math.round((completedJobs / totalJobs) * 100) : 0;
   const barColor = statusText === "completed" ? "#10b981" : "var(--primary)";
 
-  // If card doesn't exist, create it. If it does, strictly update it to avoid DOM flicker!
   if (!card) {
     card = document.createElement("div");
     card.className = "request-card glass animated slide-up";
@@ -379,7 +378,6 @@ function createRequestCard(req, container) {
     `;
     container.prepend(card); 
   } else {
-    // Safe DOM update for existing elements
     const statusBadge = card.querySelector(".status");
     if (statusBadge) {
         statusBadge.innerText = statusText;
@@ -448,6 +446,8 @@ async function fetchStatus(request_id) {
     if (previousStatus && previousStatus !== "completed") {
       const idString = request_id ? request_id.toString() : "";
       showToast(`Job ${idString.substring(0,6)} completed!`, "success");
+      
+      // Update stats passively when a job finishes
       loadStats(); 
     }
     if (polling[request_id]) {
@@ -483,7 +483,6 @@ async function loadRecentRequests() {
   const data = await res.json();
   if(!data || data.length === 0) return;
 
-  // Removed .innerHTML = "" so the UI doesn't visually glitch and delete cards while they are polling
   data.slice(-3).forEach(req => {
     createRequestCard(req, recentRequestList);
     if (req.status !== "completed" && req.status !== "failed") {
@@ -498,7 +497,6 @@ async function loadAllRequests() {
   const data = await res.json();
   if(!data || data.length === 0) return;
 
-  // Removed .innerHTML = "" 
   data.forEach(req => {
     createRequestCard(req, requestList);
     if (req.status !== "completed" && req.status !== "failed") {
@@ -519,7 +517,6 @@ async function loadScheduledRequests() {
     return;
   }
 
-  // Removed .innerHTML = "" 
   data.slice(0, 3).forEach(req => {
     createRequestCard(req, recentScheduledList);
     if (req.status !== "completed" && req.status !== "failed") startPolling(req.id);
@@ -605,10 +602,13 @@ function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentT
 
     showToast("File uploaded successfully!", "success");
 
-    await loadRecentRequests();
-    await loadAllRequests();
-    await loadScheduledRequests(); 
-    await loadStats(); 
+    // FIX: Parallelize these requests instead of waiting for them one by one
+    await Promise.all([
+      loadRecentRequests(),
+      loadAllRequests(),
+      loadScheduledRequests(),
+      loadStats()
+    ]);
     
     startPolling(res.request_id);
 
@@ -753,11 +753,14 @@ if(loginForm) {
       localStorage.setItem("access_token", accessToken);
       showToast("Welcome back!", "success");
 
-      await loadMe();
-      await loadStats(); 
-      await loadRecentRequests();
-      await loadAllRequests(); 
-      await loadScheduledRequests();
+      // FIX: Parallelize boot requests for instantly faster login
+      await Promise.all([
+        loadMe(),
+        loadStats(),
+        loadRecentRequests(),
+        loadAllRequests(),
+        loadScheduledRequests()
+      ]);
 
       showSection("dashboardSection");
       setLoggedInUI(true);
@@ -795,11 +798,15 @@ async function boot() {
   }
 
   try {
-    await loadMe();
-    await loadStats();
-    await loadRecentRequests();
-    await loadAllRequests(); 
-    await loadScheduledRequests();
+    // FIX: Parallelize boot requests for instantly faster load times
+    await Promise.all([
+      loadMe(),
+      loadStats(),
+      loadRecentRequests(),
+      loadAllRequests(),
+      loadScheduledRequests()
+    ]);
+    
     showSection("dashboardSection");
     setLoggedInUI(true);
   } catch (e) {

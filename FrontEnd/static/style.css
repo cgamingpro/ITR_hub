@@ -21,7 +21,9 @@
   --sidebar-collapsed: 80px;
   --radius: 16px;
   --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* FIX: Avoid 'all'. Explicit hardware-accelerated properties prevent lag. */
+  --transition: transform 0.3s, background-color 0.3s, border-color 0.3s, color 0.3s, opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ================= LIGHT MODE OVERRIDES ================= */
@@ -50,7 +52,7 @@ body {
   color: var(--text-main);
   min-height: 100vh;
   overflow-x: hidden;
-  transition: background 0.4s ease;
+  transition: background-color 0.4s ease;
 }
 
 /* ================= UTILITIES ================= */
@@ -73,7 +75,14 @@ body {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  transition: background 0.4s ease, border-color 0.4s ease;
+  transition: background-color 0.4s ease, border-color 0.4s ease;
+}
+
+/* FIX: Remove expensive blur filter from heavily repeated UI elements */
+.request-card.glass, .stat-card.glass {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 /* ================= LOGIN CENTER ================= */
@@ -100,7 +109,7 @@ body {
   top: 0;
   display: flex;
   flex-direction: column;
-  transition: var(--transition);
+  transition: transform 0.3s ease, width 0.3s ease;
   z-index: 100;
   border-radius: 0;
   border-left: none;
@@ -132,7 +141,7 @@ body {
   color: var(--text-muted);
   font-size: 1.2rem;
   cursor: pointer;
-  transition: var(--transition);
+  transition: transform 0.2s, color 0.2s;
 }
 .icon-btn:hover { color: var(--primary); transform: scale(1.1); }
 
@@ -143,7 +152,7 @@ body {
   margin-bottom: 8px;
   border-radius: 12px;
   cursor: pointer;
-  transition: var(--transition);
+  transition: background-color 0.2s, color 0.2s;
   display: flex;
   align-items: center;
   gap: 15px;
@@ -161,7 +170,7 @@ body {
 .user-profile { display: flex; align-items: center; gap: 15px; padding: 10px; min-width: 0; }
 .user-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); font-weight: 600; }
 
-.user-profile.clickable { cursor: pointer; transition: background 0.3s ease; border-radius: 12px; }
+.user-profile.clickable { cursor: pointer; transition: background-color 0.3s ease; border-radius: 12px; }
 .user-profile.clickable:hover { background: var(--sidebar-hover); }
 
 /* Collapsed Sidebar State */
@@ -178,7 +187,7 @@ body {
   margin-left: var(--sidebar-width);
   padding: 30px;
   width: calc(100% - var(--sidebar-width));
-  transition: var(--transition);
+  transition: margin-left 0.3s ease, width 0.3s ease;
   min-width: 0; 
 }
 .main.expanded {
@@ -191,7 +200,7 @@ body {
   position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
   background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px);
   display: flex; align-items: center; justify-content: center;
-  z-index: 2000; transition: var(--transition); opacity: 1;
+  z-index: 2000; transition: opacity 0.3s; opacity: 1;
 }
 .modal.hidden { opacity: 0; pointer-events: none; }
 .modal-content {
@@ -241,7 +250,7 @@ body {
   font-size: 0.9rem; 
   font-weight: 600; 
   color: var(--text-muted); 
-  transition: var(--transition); 
+  transition: background-color 0.2s, color 0.2s; 
 }
 .custom-tabs .tab:hover { color: var(--text-main); }
 .custom-tabs .tab.active { 
@@ -263,7 +272,7 @@ body {
   display: flex;
   align-items: center;
   gap: 15px;
-  transition: var(--transition);
+  transition: transform 0.2s, border-color 0.2s;
 }
 
 .stat-card:hover { 
@@ -317,7 +326,7 @@ input[type="email"], input[type="password"], input[type="text"], input[type="dat
   background: var(--input-bg);
   color: var(--text-main);
   font-size: 1rem;
-  transition: var(--transition);
+  transition: border-color 0.3s, box-shadow 0.3s;
   color-scheme: dark;
 }
 input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2); }
@@ -333,7 +342,7 @@ textarea {
   background: var(--input-bg);
   color: var(--text-main);
   font-size: 1rem;
-  transition: var(--transition);
+  transition: border-color 0.3s, box-shadow 0.3s;
   color-scheme: dark;
   font-family: inherit;
   resize: vertical;
@@ -346,7 +355,7 @@ textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 
   padding: 30px;
   text-align: center;
   position: relative;
-  transition: var(--transition);
+  transition: background-color 0.2s, border-color 0.2s;
   background: var(--card-bg);
   width: 100%;
 }
@@ -362,7 +371,7 @@ textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 
 .clear-file-btn {
   pointer-events: auto; display: inline-flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); 
-  color: var(--danger); cursor: pointer; transition: var(--transition); margin-left: 5px;
+  color: var(--danger); cursor: pointer; transition: transform 0.2s, background-color 0.2s; margin-left: 5px;
 }
 .clear-file-btn:hover { background: var(--danger); color: white; transform: scale(1.1); }
 
@@ -370,7 +379,7 @@ textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 
 .custom-checkbox {
   display: flex; align-items: center; gap: 10px;
   cursor: pointer; padding: 10px; border-radius: 8px;
-  background: var(--card-bg); transition: var(--transition);
+  background: var(--card-bg); transition: background-color 0.2s;
 }
 .custom-checkbox:hover { background: var(--sidebar-hover); }
 .custom-checkbox input { cursor: pointer; width: 18px; height: 18px; accent-color: var(--primary); flex-shrink: 0; }
@@ -384,7 +393,7 @@ button {
   font-size: 1rem;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 10px;
-  transition: var(--transition);
+  transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
 }
 .btn-primary { background: var(--primary); color: white; }
 .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(14,165,233,0.4); }
@@ -402,7 +411,7 @@ button {
   margin-bottom: 15px;
   background: var(--card-bg);
   border: 1px solid var(--glass-border);
-  transition: var(--transition);
+  transition: transform 0.2s, background-color 0.2s, border-color 0.2s;
   width: 100%;
   overflow: hidden; 
 }
@@ -435,7 +444,8 @@ button {
 /* ================= PROGRESS BARS ================= */
 .progress-header { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 8px; }
 .progress-wrap { width: 100%; height: 8px; background: rgba(14, 165, 233, 0.2); border-radius: 10px; overflow: hidden; }
-.progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.4s ease; border-radius: 10px; }
+/* FIX: Removed ease transition from progress bar, letting JS directly control it without GPU calculation overlap */
+.progress-bar { height: 100%; width: 0%; background: var(--primary); border-radius: 10px; }
 .progress-bar-striped {
   background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent);
   background-size: 1rem 1rem;
@@ -447,7 +457,7 @@ button {
 .toast {
   padding: 15px 20px; border-radius: 10px; color: white; display: flex; align-items: center; gap: 12px;
   background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-left: 4px solid var(--primary);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-weight: 500; min-width: 250px; transition: all 0.3s ease;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-weight: 500; min-width: 250px; transition: opacity 0.3s, transform 0.3s;
 }
 .toast-success { border-left-color: var(--success); }
 .toast-success i { color: var(--success); }
@@ -458,7 +468,7 @@ button {
 
 /* ================= ANIMATIONS ================= */
 @keyframes progress-stripes { from { background-position: 1rem 0; } to { background-position: 0 0; } }
-.animated { animation-duration: 0.5s; animation-fill-mode: both; }
+.animated { animation-duration: 0.3s; animation-fill-mode: both; } /* Optimized duration */
 .fade-in { animation-name: fadeIn; }
 .slide-up { animation-name: slideUp; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -469,7 +479,7 @@ button {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: var(--body-bg); backdrop-filter: blur(8px);
   display: flex; align-items: center; justify-content: center; z-index: 9999;
-  border: 4px dashed var(--primary); opacity: 0; pointer-events: none; transition: var(--transition);
+  border: 4px dashed var(--primary); opacity: 0; pointer-events: none; transition: opacity 0.2s;
 }
 .drop-overlay.active { opacity: 0.95; pointer-events: all; }
 
