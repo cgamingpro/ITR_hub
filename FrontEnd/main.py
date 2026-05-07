@@ -23,7 +23,7 @@ import auth
 from db import getdb
 from rediscon import redis_conn
 from models.models import Job, user, userLogin
-from local_config import GEMINI_KEY_LOCAL
+
 # URL for job queuing api 
 api2url = data.API2URL
 
@@ -38,6 +38,7 @@ rail = os.getenv("ENV")
 if rail is not None and rail == "RAILWAY":
     genai.configure(api_key= os.getenv("GEMINI_KEY_RAIL"))
 else:
+    from local_config import GEMINI_KEY_LOCAL
     genai.configure(api_key= GEMINI_KEY_LOCAL)
 
 
