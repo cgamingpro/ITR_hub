@@ -243,28 +243,18 @@
         <h2><i class="fa-solid fa-robot text-primary"></i> AI Assistant Mode</h2>
       </div>
 
-      <div class="dashboard-grid">
-        <div class="glass box upload-box">
-          <div class="box-header">
-            <h3><i class="fa-solid fa-terminal text-primary"></i> AI Command Center</h3>
-          </div>
-          <form id="aiQueryForm">
-            <div style="margin-bottom: 15px;">
-              <textarea id="aiQueryInput" class="w-100" rows="6" placeholder="Ask the AI to query database, check status, or retry failed jobs..." required></textarea>
-            </div>
-            <button type="submit" class="btn-primary w-100 mt-10" id="aiQueryBtn">
-              <i class="fa-solid fa-wand-magic-sparkles"></i> Process Query
-            </button>
-          </form>
+      <div class="glass box ai-chat-wrapper">
+        <div id="assistantRequestList" class="ai-chat-messages">
+           <div class="empty-state"><i class="fa-solid fa-message fa-2x"></i><p>Waiting for your prompt...</p></div>
         </div>
 
-        <div class="glass box list-box" style="display: flex; flex-direction: column;">
-          <div class="box-header">
-            <h3><i class="fa-solid fa-bolt text-primary"></i> Output & Logs</h3>
-          </div>
-          <div id="assistantRequestList" style="flex-grow: 1; overflow-y: auto; max-height: 500px; padding-right: 5px;">
-             <div class="empty-state"><i class="fa-solid fa-message fa-2x"></i><p>Waiting for your prompt...</p></div>
-          </div>
+        <div class="ai-chat-input-area">
+          <form id="aiQueryForm" class="ai-input-form">
+            <textarea id="aiQueryInput" rows="1" placeholder="Message ITR Hub Assistant... (Press Enter to send)" required></textarea>
+            <button type="submit" class="btn-primary" id="aiQueryBtn" title="Send Message">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </form>
         </div>
       </div>
 

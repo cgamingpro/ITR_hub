@@ -634,57 +634,60 @@ function handleUpload(e, form, fileInputId, progressBlock, progressBar, percentT
 
 if(uploadForm) uploadForm.addEventListener("submit", (e) => handleUpload(e, uploadForm, "fileInput", uploadProgressBlock, uploadProgressBar, uploadPercent, recentRequestList));
 
-// ================= AI ASSISTANT QUERY =================
-if (aiQueryForm) {
-  aiQueryForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const query = aiQueryInput.value.trim();
-    if (!query) return;
-
-    const originalBtnText = aiQueryBtn.innerHTML;
-    aiQueryBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Processing Query...`;
-    aiQueryBtn.disabled = true;
-
-    try {
-      const res = await apiFetch("/ai/query", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query })
-      });
-
-      const data = await res.json();
-      renderAiResult(query, data);
-      aiQueryInput.value = ""; 
-    } catch (err) {
-      showToast("AI Query failed", "error");
-      renderAiResult(query, { type: "error", message: err.message });
-    } finally {
-      aiQueryBtn.innerHTML = originalBtnText;
-      aiQueryBtn.disabled = false;
-    }
-  });
+// ================= AI ASSISTANT CHAT INTERFACE =================
+function scrollToChatBottom() {
+  const container = document.getElementById("assistantRequestList");
+  if(container) container.scrollTop = container.scrollHeight;
 }
 
-function renderAiResult(query, data) {
+function clearChatEmptyState() {
   const container = document.getElementById("assistantRequestList");
   const empty = container.querySelector(".empty-state");
   if (empty) empty.remove();
+  return container;
+}
 
-  const resultCard = document.createElement("div");
-  resultCard.className = "request-card glass animated slide-up mb-10";
+function renderUserMessage(query) {
+  const container = clearChatEmptyState();
+  const msgDiv = document.createElement("div");
+  msgDiv.className = "ai-message user-msg animated fade-in";
+  msgDiv.innerHTML = `<div class="msg-bubble">${query.replace(/\n/g, '<br>')}</div>`;
+  container.appendChild(msgDiv);
+  scrollToChatBottom();
+}
+
+function renderTypingIndicator() {
+  const container = clearChatEmptyState();
+  const id = 'typing-' + Date.now();
+  const msgDiv = document.createElement("div");
+  msgDiv.id = id;
+  msgDiv.className = "ai-message bot-msg animated fade-in";
+  msgDiv.innerHTML = `
+    <div class="bot-icon-avatar"><i class="fa-solid fa-robot"></i></div>
+    <div class="msg-bubble" style="display:flex; align-items:center; gap:5px; height: 38px;">
+      <i class="fa-solid fa-circle fa-beat-fade" style="font-size: 0.4em; color:var(--text-muted);"></i>
+      <i class="fa-solid fa-circle fa-beat-fade" style="font-size: 0.4em; color:var(--text-muted); animation-delay: 0.1s;"></i>
+      <i class="fa-solid fa-circle fa-beat-fade" style="font-size: 0.4em; color:var(--text-muted); animation-delay: 0.2s;"></i>
+    </div>`;
+  container.appendChild(msgDiv);
+  scrollToChatBottom();
+  return id;
+}
+
+function renderBotMessage(data) {
+  const container = clearChatEmptyState();
+  const msgDiv = document.createElement("div");
+  msgDiv.className = "ai-message bot-msg animated slide-up";
 
   let contentHtml = "";
 
   if (data.type === "query_result") {
-    
     if (data.executed_sql) {
       contentHtml += `<div style="font-family: monospace; font-size: 0.8em; color: var(--text-muted); margin-bottom: 10px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap;">${data.executed_sql}</div>`;
     }
-
     if (data.data && data.data.length > 0) {
        let headers = Object.keys(data.data[0]);
-       let tableHtml = `<div class="ai-table-container"><table class="ai-table">`;
-       tableHtml += `<thead><tr>`;
+       let tableHtml = `<div class="ai-table-container"><table class="ai-table"><thead><tr>`;
        headers.forEach(h => tableHtml += `<th>${h}</th>`);
        tableHtml += `</tr></thead><tbody>`;
        data.data.forEach(row => {
@@ -695,29 +698,83 @@ function renderAiResult(query, data) {
        tableHtml += `</tbody></table></div>`;
        contentHtml += tableHtml;
     } else {
-       contentHtml += `<p class="text-muted" style="margin-top: 10px;">Query returned no results.</p>`;
+       contentHtml += `<p class="text-muted">Query returned no results.</p>`;
     }
   } else if (data.type === "action_result") {
-    contentHtml = `<div style="margin-top: 10px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--success); padding: 12px; border-radius: 8px; color: var(--text-main);">
-      <i class="fa-solid fa-check text-success" style="margin-right: 8px;"></i> ${data.message}
-    </div>`;
+    contentHtml = `<div style="color: var(--success);"><i class="fa-solid fa-check" style="margin-right: 8px;"></i> ${data.message}</div>`;
   } else {
-    contentHtml = `<div class="text-danger" style="margin-top: 10px;">${data.message || data.detail || 'Unknown response from AI'}</div>`;
+    contentHtml = `<div class="text-danger">${data.message || data.detail || 'Unknown response from AI'}</div>`;
   }
 
-  resultCard.innerHTML = `
-    <div style="font-weight: 600; margin-bottom: 12px; color: var(--text-main); border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
-      <i class="fa-solid fa-user text-muted" style="margin-right: 8px;"></i> ${query}
-    </div>
-    <div>
-      <i class="fa-solid fa-robot text-primary" style="margin-right: 8px;"></i>
-      ${contentHtml}
-    </div>
+  msgDiv.innerHTML = `
+    <div class="bot-icon-avatar"><i class="fa-solid fa-robot"></i></div>
+    <div class="msg-bubble">${contentHtml}</div>
   `;
-
-  container.prepend(resultCard);
+  container.appendChild(msgDiv);
+  scrollToChatBottom();
 }
 
+if (aiQueryForm) {
+  aiQueryForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const query = aiQueryInput.value.trim();
+    if (!query) return;
+
+    renderUserMessage(query);
+    
+    // Reset Input
+    aiQueryInput.value = "";
+    aiQueryInput.style.height = 'auto';
+
+    const originalBtnText = aiQueryBtn.innerHTML;
+    aiQueryBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`;
+    aiQueryBtn.disabled = true;
+
+    const typingId = renderTypingIndicator();
+
+    try {
+      const res = await apiFetch("/ai/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query })
+      });
+
+      const data = await res.json();
+      const typingEl = document.getElementById(typingId);
+      if(typingEl) typingEl.remove();
+      
+      renderBotMessage(data);
+    } catch (err) {
+      const typingEl = document.getElementById(typingId);
+      if(typingEl) typingEl.remove();
+
+      showToast("AI Query failed", "error");
+      renderBotMessage({ type: "error", message: err.message });
+    } finally {
+      aiQueryBtn.innerHTML = originalBtnText;
+      aiQueryBtn.disabled = false;
+    }
+  });
+
+  // Handle Enter to Submit (Shift+Enter for newline)
+  if (aiQueryInput) {
+    aiQueryInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (aiQueryInput.value.trim()) {
+          aiQueryForm.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+      }
+    });
+
+    // Auto-resize height
+    aiQueryInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = (this.scrollHeight) + 'px';
+      if(this.value === '') this.style.height = 'auto';
+    });
+  }
+}
 
 // ================= LOGIN =================
 if(loginForm) {
