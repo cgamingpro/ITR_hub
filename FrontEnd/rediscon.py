@@ -6,5 +6,6 @@ redis_conn = redis.Redis(
     port=data.redis_port,
     username=data.redis_user,
     password=data.redis_password,
-    decode_responses=True
+    decode_responses=True,
+    ssl=data.redis_ssl
 )
