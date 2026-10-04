@@ -33,13 +33,14 @@ UPLOAD_DIRECTORY = os.getenv("STORAGE_PATH", "local_storage")
 os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 ALLOWED_TABLES = {"requests", "jobs", "job_results"}
 
+import os
 
-rail = os.getenv("ENV")
-if rail is not None and rail == "RAILWAY":
-    genai.configure(api_key= os.getenv("GEMINI_KEY_RAIL"))
-else:
-    from local_config import GEMINI_KEY_LOCAL
-    genai.configure(api_key= GEMINI_KEY_LOCAL)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not GEMINI_API_KEY:
+    raise RuntimeError("GEMINI_API_KEY environment variable is not set")
+
+genai.configure(api_key=GEMINI_API_KEY)
 
 
 model = genai.GenerativeModel("gemini-2.5-flash")
