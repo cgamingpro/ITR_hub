@@ -39,17 +39,18 @@ else:
 REDIS_URL = os.getenv("REDIS_URL")
 
 if REDIS_URL:
-    # Railway Redis
+    import urllib.parse as urlparse
+
     redis_url = urlparse.urlparse(REDIS_URL)
 
     redis_host = redis_url.hostname
-    redis_port = redis_url.port
+    redis_port = redis_url.port or 6379
     redis_user = redis_url.username
     redis_password = redis_url.password
-
+    redis_ssl = redis_url.scheme == "rediss"
 else:
-    # Local Redis
     redis_host = "localhost"
     redis_port = 6379
     redis_user = None
     redis_password = None
+    redis_ssl = False
